@@ -8,11 +8,14 @@
   "scripts": {
     "serve": "node tools/serve.js",
     "test": "node tools/run-tests.js",
-    "docs": "node tools/capture-docs.js && node tools/build-sequence-figure.js",
+    "docs": "node tools/capture-docs.js && node tools/build-sequence-figure.js && node tools/make-gif.js",
+    "gif": "node tools/make-gif.js",
     "icons": "node android/icon-source/generate-icons.js"
   },
   "devDependencies": {
-    "playwright": "^1.55.1"
+    "gifenc": "^1.0.3",
+    "playwright": "^1.55.1",
+    "pngjs": "^7.0.0"
   },
   "engines": {
     "node": ">=18"
