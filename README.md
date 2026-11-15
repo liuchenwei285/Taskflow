@@ -418,6 +418,26 @@ Taskflow/
 
 ---
 
+## 参与贡献
+
+欢迎提 Issue 和 PR。提 Issue 时请顺手打上标签，方便分类与统计：
+
+| 标签 | 用途 |
+|---|---|
+| `bug` | 功能缺陷：与预期行为不符 |
+| `ui` / `animation` / `glassmorphism` | 界面布局 / 动效转场 / 磨砂玻璃材质 |
+| `performance` | 帧耗时、内存、启动速度 |
+| `android` / `web` | 仅影响 Android 壳 / 仅影响 Web 端 |
+| `enhancement` | 新功能建议 |
+| `refactor` | 不改变外部行为的内部重构 |
+| `documentation` | README、注释或示例需要改进 |
+| `accessibility` | 无障碍与键盘操作 |
+| `question` | 使用问题与讨论 |
+
+`good first issue` 与 `help wanted` 留给适合新贡献者的小任务。
+
+---
+
 ## License
 
 [MIT](LICENSE) © Alfred Liu
