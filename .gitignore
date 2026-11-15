@@ -1,0 +1,28 @@
+# 依赖
+node_modules/
+e2e-env/
+
+# 本地产物
+*.apk
+*.idsig
+*.log
+
+# 根目录散落的调试截图（docs/ 下的是文档素材，保留）
+/*.png
+
+# WorkBuddy 本地数据
+.workbuddy-ai/
+.workbuddy/
+
+# Android 构建中间物与体积项（SDK / JDK / 签名密钥绝不进仓库）
+android/keystore/
+android/sdk/
+android/tools/
+android/build/
+android/dist/
+android/backup/
+android/icon-source/legacy-icons/
+
+# 系统文件
+.DS_Store
+Thumbs.db

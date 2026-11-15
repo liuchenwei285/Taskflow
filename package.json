@@ -1,0 +1,20 @@
+{
+  "name": "taskflow",
+  "version": "2.6.1",
+  "private": true,
+  "description": "Taskflow · 倒计时任务管理 · 单文件 Web 应用 + Android WebView 壳",
+  "license": "MIT",
+  "author": "Alfred Liu",
+  "scripts": {
+    "serve": "node tools/serve.js",
+    "test": "node tools/run-tests.js",
+    "docs": "node tools/capture-docs.js && node tools/build-sequence-figure.js",
+    "icons": "node android/icon-source/generate-icons.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

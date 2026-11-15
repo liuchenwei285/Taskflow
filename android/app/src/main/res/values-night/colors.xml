@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色：中性微冷灰 + 浅靛蓝强调；卡片描边用 outline 60% 透明度 -->
+    <color name="tf_bg">#111317</color>
+    <color name="tf_surface">#1A1D22</color>
+    <color name="tf_surface_variant">#262A31</color>
+    <color name="tf_on_bg">#E6E8EC</color>
+    <color name="tf_on_surface_variant">#A9AEB8</color>
+    <color name="tf_outline">#3A3F48</color>
+    <color name="tf_outline_strong">#6C727C</color>
+
+    <color name="tf_accent">#A9C1F5</color>
+    <color name="tf_on_accent">#0F2A57</color>
+    <color name="tf_accent_strong">#A9C1F5</color>
+    <color name="tf_primary_container">#284275</color>
+    <color name="tf_on_primary_container">#D9E3F8</color>
+    <color name="tf_accent_soft">#33A9C1F5</color>
+
+    <color name="tf_error">#F2B8B5</color>
+    <color name="tf_error_container">#8C1D18</color>
+    <color name="tf_on_error_container">#FCE4E1</color>
+
+    <color name="tf_scrim">#B3000000</color>
+</resources>
