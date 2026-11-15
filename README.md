@@ -42,7 +42,12 @@ Taskflow 是一个**倒计时任务管理**应用：给任务设置时长或截�
 
 <img src="docs/theme-switch-sequence.png" width="100%" alt="主题切换动画逐帧分解：圆形从按钮中心扩散揭开深色主题">
 
-<p align="center"><video src="docs/theme-switch.webm" width="320" autoplay loop muted playsinline></video></p>
+<p align="center">
+  <video autoplay loop muted playsinline width="320">
+    <source src="docs/theme-switch.webm" type="video/webm">
+  </video>
+  <br><sub>真实运行录屏（无头 Chromium，412×915）</sub>
+</p>
 
 ### 设计原则：揭开，而不是淡化
 
