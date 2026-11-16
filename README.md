@@ -10,6 +10,8 @@
 ![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)
 ![No network permission](https://img.shields.io/badge/network-permission-none-2ea44f.svg)
 
+[English](README.en.md) · **简体中文**
+
 <img src="docs/app-light.png" width="240" alt="浅色界面"> <img src="docs/app-dark.png" width="240" alt="深色界面"> <img src="docs/stats.png" width="240" alt="统计页">
 
 [⬇️ 下载 APK](https://github.com/liuchenwei285/Taskflow/releases) · [使用说明](#快速开始) · [工作原理](#-app-工作原理)
