@@ -682,6 +682,39 @@ function truthy(label, v){ eq(label, !!v, true); }
     eq(`侧栏 ${pg}：高亮唯一且正确`, state.current.length === 1 && state.current[0] === pg, true);
   }
 
+  // 31d. 侧栏收放 + 底部品牌/主题/设置 + 双主题按钮同步
+  const sideW = () => page.evaluate(() => Math.round(document.getElementById('sidebar').getBoundingClientRect().width));
+  const wideW = await sideW();
+  truthy('侧栏展开宽度 240px', wideW === 240);
+  await page.click('#sidebarToggle');
+  await page.waitForTimeout(150);
+  eq('收起后宽度 64px', await sideW(), 64);
+  eq('收起后 aria-expanded=false', await page.getAttribute('#sidebarToggle', 'aria-expanded'), 'false');
+  truthy('收起后品牌文字隐藏', !(await page.locator('.sidebar__footer-brand').isVisible()));
+  truthy('收起后主题按钮仍可见', await page.locator('#btnThemeSide').isVisible());
+  truthy('收起后设置按钮仍可见', await page.locator('#sidebar [data-page="me"]').isVisible());
+  await page.click('#sidebarToggle');
+  await page.waitForTimeout(150);
+  eq('再展开宽度 240px', await sideW(), 240);
+  // 底部顺序：主题按钮在设置按钮左边
+  const footOrder = await page.evaluate(() => {
+    const t = document.getElementById('btnThemeSide').getBoundingClientRect();
+    const s = document.querySelector('#sidebar [data-page="me"]').getBoundingClientRect();
+    return t.x < s.x;
+  });
+  truthy('底部：设置在主题右边', footOrder);
+  // 双主题按钮 aria 同步
+  const beforeTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+  await page.click('#btnThemeSide');
+  await page.waitForTimeout(120);
+  const sync = await page.evaluate(() => ({
+    theme: document.documentElement.dataset.theme,
+    app: document.getElementById('btnTheme').getAttribute('aria-pressed'),
+    side: document.getElementById('btnThemeSide').getAttribute('aria-pressed')
+  }));
+  truthy('侧栏主题按钮切换生效', sync.theme !== beforeTheme);
+  eq('双主题按钮 aria 同步', sync.app, sync.side);
+
   // 31c. 390 宽：侧栏不可见，底部分段/导航可见（布局与改版前一致）
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(350);
