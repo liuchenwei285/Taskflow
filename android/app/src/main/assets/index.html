@@ -55,6 +55,8 @@ d.dataset.theme=(m&&m.matches)?'dark':'light';}catch(_){}})();
   --ease:cubic-bezier(.2,0,0,1);
   --ease-emph:cubic-bezier(.32,.72,0,1);
   --fast:.16s; --norm:.24s;
+  /* 品牌字：圆润几何粗体，沿用系统字体栈（单文件、无外部依赖） */
+  --font-brand:"Arial Rounded MT Bold","Trebuchet MS","Avenir Next","Nunito",system-ui,sans-serif;
 }
 :root[data-theme="dark"]{
   --bg:#111317; --surface:#1A1D22; --surface-variant:#262A31;
@@ -956,7 +958,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     border-radius:var(--r-sm); background:var(--primary); color:var(--on-primary);
   }
   body.desktop-layout .sidebar__brandmark svg{width:20px; height:20px}
-  body.desktop-layout .sidebar__toggle .brand-name{flex:1; text-align:left; min-width:0; font-size:15px; font-weight:700}
+  body.desktop-layout .sidebar__toggle .brand-name{flex:1; text-align:left; min-width:0; font-family:var(--font-brand); font-size:15.5px; font-weight:800; letter-spacing:-.3px}
   /* 收起按钮：独立于品牌条，仅图标可点 */
   body.desktop-layout .sidebar__collapse{
     display:grid; place-items:center; flex:none; width:36px; height:36px;
@@ -974,7 +976,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     display:flex; align-items:center; justify-content:space-between; gap:var(--s2);
   }
   body.desktop-layout .sidebar__footer-brand{
-    font-size:13px; color:var(--on-bg); font-weight:650;
+    font-family:var(--font-brand); font-size:13.5px; color:var(--on-bg); font-weight:800; letter-spacing:-.2px;
     min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   body.desktop-layout .sidebar__footer-row{display:flex; gap:6px; flex:none}
@@ -1017,7 +1019,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
 <aside class="sidebar" id="sidebar" aria-label="侧边导航" hidden>
   <div class="sidebar__toggle">
     <span class="sidebar__brandmark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 10.5A5.9 5.9 0 1 1 13.5 6.3"/><line x1="12" y1="12" x2="14.3" y2="9.8" stroke-width="1"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
     </span>
     <span class="brand-name">Taskflow</span>
     <button type="button" class="sidebar__collapse" id="sidebarToggle" aria-expanded="true" aria-label="收起侧栏">
