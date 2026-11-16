@@ -3825,16 +3825,28 @@ function syncUI(){
 let page = 'tasks';
 function setPage(p){
   page = p;
-  ['tasks','stats','me'].forEach(function(k){
+  ['tasks','stats','schedule','me'].forEach(function(k){
     const el = $('#view' + k.charAt(0).toUpperCase() + k.slice(1));
     if (el) el.classList.toggle('hidden', k !== p);
   });
   document.body.classList.toggle('no-seg', p !== 'tasks');
-  document.body.classList.toggle('no-fab', p === 'me' || p === 'stats');
-  $$('#nav button').forEach(function(b){ b.setAttribute('aria-current', b.dataset.page === p ? 'page' : 'false'); });
+  document.body.classList.toggle('no-fab', p === 'me' || p === 'stats' || p === 'schedule');
+  $$('#nav button, #sidebar button').forEach(function(b){ b.setAttribute('aria-current', b.dataset.page === p ? 'page' : 'false'); });
   const sh = $('#appShell'); if (sh) sh.scrollTop = 0; else window.scrollTo(0, 0);
   if (p === 'tasks') requestAnimationFrame(relayoutSeg);
   if (p === 'stats') renderStatsPage(statsOf(tasks));
+}
+
+/* 宽屏侧栏布局：仅「无 AndroidBridge 且 ≥900px」时生效。
+   APK 内（存在 AndroidBridge）任何尺寸都不加 desktop-layout、不显示侧栏，
+   保持改版前的底部导航布局与全部行为。 */
+function applyDesktopLayout(){
+  const sidebar = document.getElementById('sidebar');
+  const isApk = !!(window.AndroidBridge && typeof window.AndroidBridge === 'object');
+  const wide = window.matchMedia && window.matchMedia('(min-width:900px)').matches;
+  const on = !isApk && wide;
+  document.body.classList.toggle('desktop-layout', on);
+  if (sidebar) sidebar.hidden = !on;
 }
 
 /* ---------------- Actions ---------------- */
@@ -4361,6 +4373,13 @@ function boot(){
   applyStatic();
   bindLangSeg();
   bindAccentRow();         // 浏览器显示自定义主题色控件；Android 隐藏
+  applyDesktopLayout();    // 宽屏侧栏：仅非 APK 且 ≥900px 生效
+  if (window.matchMedia){
+    const mqWide = window.matchMedia('(min-width:900px)');
+    if (mqWide.addEventListener) mqWide.addEventListener('change', applyDesktopLayout);
+    else if (mqWide.addListener) mqWide.addListener(applyDesktopLayout);
+  }
+  window.addEventListener('resize', applyDesktopLayout, { passive:true });
   const __store = loadStore();
   tasks = __store.tasks;
   sessions = __store.sessions;
@@ -4485,6 +4504,11 @@ function bindGlobal(){
       try{ if (navigator.vibrate) navigator.vibrate(8); }catch(_){}
       setPage(b.dataset.page);
     };
+  });
+
+  // 宽屏侧栏：同一 data-page 驱动，复用 setPage，不加 dock 的弹跳/振动
+  $$('#sidebar button').forEach(function(b){
+    b.addEventListener('click', function(){ setPage(b.dataset.page); });
   });
 
   // 主题切换（圆形扩散）
