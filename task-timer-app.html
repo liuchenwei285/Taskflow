@@ -680,15 +680,19 @@ body.perf-lite .pill{
 .stat-card--alert{background:var(--error-container)}
 .stat-card--alert .stat-card__n,.stat-card--alert .stat-card__l{color:var(--on-error-container)}
 
-/* 小号分段：专注 / 完成 */
-.mini-seg{display:inline-flex; gap:var(--s1); padding:var(--s1);
-  border-radius:var(--r-full); background:var(--surface); border:none}
+/* 小号分段：专注 / 完成（滑块指示） */
+.mini-seg{position:relative; display:inline-flex; gap:var(--s1); padding:var(--s1);
+  border-radius:var(--r-full); background:var(--surface-variant); border:none}
+.mini-seg__ind{position:absolute; top:var(--s1); left:0; height:32px; border-radius:var(--r-full);
+  background:var(--primary); z-index:0; pointer-events:none;
+  transition:transform .26s var(--ease), width .26s var(--ease)}
 .mini-seg button{
+  position:relative; z-index:1;
   height:32px; padding:0 var(--s3); border:none; background:none; border-radius:var(--r-full);
   font-family:inherit; font-size:12px; font-weight:500; color:var(--on-sv);
-  cursor:pointer; transition:background .2s var(--ease), color .2s var(--ease);
+  cursor:pointer; transition:color .2s var(--ease);
 }
-.mini-seg button[aria-pressed="true"]{background:var(--primary); color:var(--on-primary); font-weight:600}
+.mini-seg button[aria-pressed="true"]{color:var(--on-primary); font-weight:600}
 .chart__hint{font-size:12px; color:var(--on-sv); white-space:nowrap}
 
 /* 柱状图：7 等分，柱间距 8，高 120 */
@@ -2885,6 +2889,19 @@ function renderOverdue(){ /* 已到期已并入筛选菜单与统计行 */ }
 
 let chartMode = 'focus';
 
+/* 专注/完成 滑块：按选中按钮实际位置定位（适配中英文不同宽度） */
+function moveChartInd(animate){
+  const seg = document.getElementById('chartSeg');
+  if (!seg) return;
+  const ind = seg.querySelector('.mini-seg__ind');
+  const active = seg.querySelector('[data-chart="' + chartMode + '"]');
+  if (!ind || !active) return;
+  if (!animate) ind.style.transition = 'none';
+  ind.style.width = active.offsetWidth + 'px';
+  ind.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+  if (!animate) requestAnimationFrame(function(){ ind.style.transition = ''; });
+}
+
 /* 近 7 天序列：专注取分段（含已删除任务），完成取任务完成时间 */
 function chartSeries(){
   const out = [];
@@ -3016,6 +3033,7 @@ function renderStatsPage(s){
     + '<div class="stat-card">'
     +   '<div class="stat-card__head">'
     +     '<div class="mini-seg" id="chartSeg">'
+    +       '<span class="mini-seg__ind" aria-hidden="true"></span>'
     +       '<button type="button" data-chart="focus" aria-pressed="' + (chartMode === 'focus') + ('">' + T("专注") + '</button>')
     +       '<button type="button" data-chart="done" aria-pressed="' + (chartMode === 'done') + ('">' + T("完成") + '</button>')
     +     '</div>'
@@ -3040,6 +3058,8 @@ function renderStatsPage(s){
     + '</div>'
     + '</div>';
 
+  moveChartInd(false);
+
   $$('#chartSeg [data-chart]').forEach(function(b){
     b.onclick = function(){
       if (chartMode === b.dataset.chart) return;
@@ -3047,6 +3067,7 @@ function renderStatsPage(s){
       $$('#chartSeg [data-chart]').forEach(function(x){
         x.setAttribute('aria-pressed', String(x === b));
       });
+      moveChartInd(true);
       updateChart();
     };
   });
@@ -4560,7 +4581,7 @@ function bindGlobal(){
   bindSegPointer();
   // 尺寸变化只管滑块定位与看门狗（磨砂材质无需重建任何贴图）
   window.addEventListener('resize', function(){
-    requestAnimationFrame(function(){ relayoutSeg(); lgWatchdog('resize'); placeSortMenu(); });
+    requestAnimationFrame(function(){ relayoutSeg(); moveChartInd(false); lgWatchdog('resize'); placeSortMenu(); });
   });
   window.addEventListener('orientationchange', function(){
     setTimeout(function(){ relayoutSeg(); }, 120);
