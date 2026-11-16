@@ -893,24 +893,27 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
   body.desktop-layout .sidebar__toggle:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
   body.desktop-layout .sidebar__toggle svg{width:20px; height:20px; flex:none}
 
-  /* 底部区：品牌在上，下面一行两个圆按钮（主题、设置） */
-  body.desktop-layout .sidebar__footer{margin-top:auto; padding-top:var(--s3); border-top:1px solid var(--outline)}
+  /* 底部区：一行——左侧缩小字号的品牌，右侧两个一致的圆圈按钮（主题、设置） */
+  body.desktop-layout .sidebar__footer{
+    margin-top:auto; padding-top:var(--s3); border-top:1px solid var(--outline);
+    display:flex; align-items:center; justify-content:space-between; gap:var(--s2);
+  }
   body.desktop-layout .sidebar__footer-brand{
-    font-size:12px; color:var(--on-sv); line-height:1.4;
-    padding:0 var(--s2) var(--s3); word-break:break-word;
+    font-size:10.5px; color:var(--on-sv); line-height:1.3;
+    min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  body.desktop-layout .sidebar__footer-brand b{display:block; font-size:14px; color:var(--on-bg)}
-  body.desktop-layout .sidebar__footer-row{display:flex; gap:var(--s2); padding:0 var(--s2)}
+  body.desktop-layout .sidebar__footer-brand b{display:block; font-size:12.5px; color:var(--on-bg); font-weight:650}
+  body.desktop-layout .sidebar__footer-row{display:flex; gap:6px; flex:none}
   body.desktop-layout .sidebar__side-btn{
-    flex:1; display:flex; align-items:center; justify-content:center;
-    width:44px; height:44px; border:1px solid var(--outline); border-radius:var(--r-full);
-    background:var(--surface-variant); color:var(--on-bg); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    width:36px; height:36px; border:1px solid var(--outline); border-radius:var(--r-full);
+    background:transparent; color:var(--on-sv); cursor:pointer;
     -webkit-tap-highlight-color:transparent;
-    transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+    transition:background var(--fast) var(--ease), color var(--fast) var(--ease), border-color var(--fast) var(--ease);
   }
-  body.desktop-layout .sidebar__side-btn:hover{background:var(--primary-container); color:var(--on-primary-container)}
+  body.desktop-layout .sidebar__side-btn:hover{background:var(--surface-variant); color:var(--on-bg)}
   body.desktop-layout .sidebar__side-btn:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
-  body.desktop-layout .sidebar__side-btn svg{width:20px; height:20px}
+  body.desktop-layout .sidebar__side-btn svg{width:18px; height:18px}
 
   /* 收起态：隐藏所有文字/副标题，图标居中；底部只留两个圆按钮 */
   body.desktop-layout.sidebar-collapsed .sidebar{padding-left:var(--s2); padding-right:var(--s2)}
@@ -922,9 +925,9 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
   body.desktop-layout.sidebar-collapsed .sidebar__footer-row{flex-direction:column; align-items:center; padding:0}
   body.desktop-layout.sidebar-collapsed .sidebar__footer{border-top-color:transparent}
 
-  /* 宽屏底部「设置」入口（data-page=me）高亮态：与侧栏主项一致 */
+  /* 宽屏底部「设置」入口（data-page=me）高亮：描边 + 图标变色，不用整块亮蓝填充 */
   body.desktop-layout #sidebar .sidebar__side-btn[data-page="me"][aria-current="page"]{
-    background:var(--primary-container); color:var(--on-primary-container); border-color:var(--primary);
+    color:var(--primary); border-color:var(--primary); background:var(--primary-container);
   }
 }
 </style>
