@@ -572,7 +572,8 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(300);
 
   /* ---------- 34. 底部导航 / 触控区 / 指示块 / 菜单锚点 ---------- */
-  eq('底栏导航三项', await page.locator('#nav button').count(), 3);
+  eq('底栏导航四项', await page.locator('#nav button').count(), 4);
+  eq('底栏含智能排程', await page.locator('#nav [data-page="schedule"]').count(), 1);
   eq('右上角仅主题按钮', await page.locator('.appbar button').count(), 1);
   eq('问号入口已移入我的', await page.locator('#nav [data-page="me"]').count(), 1);
   await page.click('#nav [data-page="me"]');

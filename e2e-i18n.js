@@ -53,7 +53,7 @@ const CJK_SCAN = () => {
     eq('切换后标题', await p.title(), 'Taskflow · Countdown Task Manager');
     eq('导航 Tasks', (await p.textContent('#nav button[data-page="tasks"]')).trim(), 'Tasks');
     eq('导航 Stats', (await p.textContent('#nav button[data-page="stats"]')).trim(), 'Stats');
-    eq('导航 Me', (await p.textContent('#nav button[data-page="me"]')).trim(), 'Me');
+    eq('导航 Settings', (await p.textContent('#nav button[data-page="me"]')).trim(), 'Settings');
     eq('页标题 Me', (await p.textContent('#viewMe .view__title')).trim(), 'Me');
 
     const scan = await p.evaluate(CJK_SCAN);
