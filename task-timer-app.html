@@ -571,6 +571,7 @@ body.perf-lite .pill{
 }
 .seg-line.wrap{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s2)}
 .seg-line.wrap button{padding:0 var(--s2)}
+#segAlert{grid-template-columns:repeat(2,1fr)}   /* 提前预警 4 项排成 2×2，不留空 */
 
 /* ---------------- 弹窗 ---------------- */
 .scrim{
@@ -636,7 +637,7 @@ body.perf-lite .pill{
 .grid2{display:grid; grid-template-columns:1fr 1fr; gap:var(--s3)}
 @media(max-width:339px){.grid2{grid-template-columns:1fr}}
 
-.types{display:grid; grid-template-columns:1fr 1fr; gap:var(--s3)}
+.types{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s3)}   /* 时间模式 3 项排成 1×3，不留空 */
 @media(max-width:379px){.types{grid-template-columns:1fr}}
 .type-opt{
   display:flex; align-items:center; gap:var(--s3); text-align:left;
@@ -831,6 +832,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w); z-index:60;
     display:flex; flex-direction:column; gap:var(--s2);
     padding:calc(var(--s6) + var(--s2)) var(--s3) var(--s5);
+    transition:width .28s var(--ease), padding .28s var(--ease);
     background:var(--surface); border-right:1px solid var(--outline);
   }
   body.desktop-layout .sidebar__brand{
@@ -861,6 +863,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     left:var(--sidebar-w); right:0;
     padding:0 var(--s6) var(--s6);
     -webkit-mask-image:none!important; mask-image:none!important;
+    transition:left .28s var(--ease);
   }
   body.desktop-layout .app-shell::after{display:none!important}
   body.desktop-layout .content,
