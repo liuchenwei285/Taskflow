@@ -21,6 +21,7 @@ const MIME = {
 function start(port) {
   const server = http.createServer((req, res) => {
     let rel = decodeURIComponent(req.url.split('?')[0]);
+    if (rel === '/favicon.ico'){ res.writeHead(204); return res.end(); }
     if (rel === '/' || rel === '') rel = '/task-timer-app.html';
     const file = path.join(ROOT, path.normalize(rel).replace(/^[/\\]+/, ''));
     if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {

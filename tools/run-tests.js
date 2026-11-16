@@ -6,7 +6,7 @@ const { start } = require('./serve');
 
 const PORT = Number(process.env.PORT || 8899);
 const ROOT = path.resolve(__dirname, '..');
-const SUITES = ['test-taskflow.js', 'e2e-taskflow.js', 'e2e-notify.js'];
+const SUITES = ['test-taskflow.js', 'e2e-taskflow.js', 'e2e-notify.js', 'e2e-i18n.js'];
 
 function run(file) {
   return new Promise(resolve => {

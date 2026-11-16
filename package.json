@@ -13,6 +13,7 @@
     "icons": "node android/icon-source/generate-icons.js"
   },
   "devDependencies": {
+    "acorn": "^8.19.0",
     "gifenc": "^1.0.3",
     "playwright": "^1.55.1",
     "pngjs": "^7.0.0"

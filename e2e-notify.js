@@ -7,7 +7,7 @@ const truthy = (l,v) => eq(l, !!v, true);
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
-  const ctx = await browser.newContext({ permissions: [] });
+  const ctx = await browser.newContext({ permissions: [], locale: 'zh-CN' });
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));

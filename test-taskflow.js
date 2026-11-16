@@ -289,7 +289,7 @@ console.log('\n[15] 已完成字段校验（HTML 关键实现存在性检查）'
     ['提示音 WebAudio',     /createOscillator/],
     ['到期横幅',            /function showBanner\(/],
     ['到期调用 showBanner', /showBanner\(title, body, kind\)/],
-    ['fireAlert 触发',      /function fireAlert\(t\)\{\s*notify\(t, '倒计时结束'/],
+    ['fireAlert 触发',      /function fireAlert\(t\)\{\s*notify\(t, T\('倒计时结束'\)/],
     ['提前预警',            /rem <= t\.alertAhead \* 1000/],
     ['暂停逻辑',            /t\.status = 'paused'/],
     ['排序:剩余时间',       /deadline\(a,b\)/],
@@ -326,7 +326,7 @@ console.log('\n[15] 已完成字段校验（HTML 关键实现存在性检查）'
     ['卡片无彩色竖条',      /task__bar/],
     ['已到期并入筛选',      /present\.overdue/],
     ['FAB',                 /class="fab"/],
-    ['Snackbar 撤销删除',   /label:'撤销'/],
+    ['Snackbar 撤销删除',   /label:T\('撤销'\)/],
   ];
   for (const [label, re] of need){ if (label === '卡片无彩色竖条') truthy(label, !re.test(html)); else truthy(label, re.test(html)); }
   truthy('无硬编码品牌紫 #7262D6', !/#7262D6/i.test(html));

@@ -28,6 +28,7 @@ Taskflow 是一个**倒计时任务管理**应用：给任务设置时长或截�
 | 🕐 三种计时模式 | 固定时长 `duration` / 截止时间 `deadline` / 番茄钟 `pomodoro` |
 | 🎚️ 滑动分段筛选 | 底部滑块可在「全部 / 进行中 / 已完成」间拖动吸附，速度投影 + 弹簧回弹 |
 | 🌗 圆形揭示主题切换 | 见下方 [主题切换动画](#-ui-主题切换动画) |
+| 🌐 中英双语 | 「我的 → 语言」切换中文 / English，默认跟随系统语言，选择本地记忆 |
 | 📊 专注统计 | 按天聚合专注时长，跨午夜的专注段会自动拆分到两天 |
 | 💾 本地存储 | 全部数据在设备本地 `localStorage`，支持 JSON 备份导入 / 导出 |
 | 🔕 到点提醒 | 原生通知通道（Android）+ 标准 Notification API（浏览器） |
@@ -161,6 +162,21 @@ ValueAnimator.ofFloat(0f, maxR)                       // maxR = 到最远角 + 8
 - **Material You**（Android 12+）：可从壁纸取色，原生通过 `getThemeTokens()` 下发调色板，
   网页侧 `window.__onThemeTokens(payload)` 接收后刷新 CSS 变量。
 - **首屏不闪白**：`<head>` 里的内联脚本在样式表解析前就按 `prefers-color-scheme` 定好 `data-theme`。
+
+---
+
+## 🌐 界面语言（中文 / English）
+
+<img src="docs/lang-switch.png" width="100%" alt="中文与英文界面对照">
+
+- **入口**：「我的 → Language」两段控件，切换立即生效，写入 `prefs.lang` 并在下次启动沿用。
+- **默认跟随系统**：`navigator.languages` 首个语言以 `zh` 开头 → 中文，其余 → English；也可手动锁定任一种。
+- **实现**：静态文案用 DOM 文本节点遍历 + 中文原文缓存（gettext 风格 msgid），动态文案走 `T()` / `Tn()`，
+  字典 212 条；缺失翻译自动回退中文，不会出现空白。
+- **格式本地化**：倒计时单位（`3d 04:05:06` / `3天`）、相对时间（`in 5m` / `5分钟后`）、
+  绝对时间（`Nov 16 09:30` / `11月16日 09:30`）、计数（`4 items` / `4 项`）都按语言输出。
+- **零残留保证**：`e2e-i18n.js` 会在英文模式下扫描页面可见文本与 `aria-label` / `placeholder` / `title`，
+  出现任何中文即判失败（语言按钮「中文」本身除外）。
 
 ---
 
@@ -374,6 +390,7 @@ node e2e-notify.js           # 通知
 | `test-taskflow.js` | 103 项 | 纯逻辑：计时、番茄钟阶段、排序分组、存储、备份校验 |
 | `e2e-taskflow.js` | 157 项 | 浏览器 E2E：完整任务流、筛选、拖动吸附、主题切换、导入导出 |
 | `e2e-notify.js` | 18 项 | 通知与权限：权限分支、提醒触发、震动 |
+| `e2e-i18n.js` | 23 项 | 语言：跟随系统、手动切换、持久化、英文零中文残留、360px 无溢出 |
 
 全部在无头 Chromium 中运行；`e2e-taskflow.js` 还额外覆盖 Firefox 与 WebKit 的降级路径。
 
@@ -387,6 +404,7 @@ Taskflow/
 ├─ test-taskflow.js         # 逻辑回归
 ├─ e2e-taskflow.js          # 浏览器 E2E
 ├─ e2e-notify.js            # 通知回归
+├─ e2e-i18n.js              # 语言（中文 / English）验收
 ├─ package.json
 ├─ android/
 │  ├─ app/src/main/

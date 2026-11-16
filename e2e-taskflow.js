@@ -16,7 +16,8 @@ function truthy(label, v){ eq(label, !!v, true); }
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
-  const ctx = await browser.newContext();
+  // 固定中文环境：应用默认跟随系统语言，测试断言以中文文案为准
+  const ctx = await browser.newContext({ locale: 'zh-CN' });
   const page = await ctx.newPage();
 
   const errors = [];

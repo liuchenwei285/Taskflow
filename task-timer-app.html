@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#FAFAFA">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDI0IDEwMjQiPjxyZWN0IHdpZHRoPSIxMDI0IiBoZWlnaHQ9IjEwMjQiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNIDc1My41IDQ0Ny4zIEEgMjUwIDI1MCAwIDEgMSA1NzYuNyAyNzAuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkYzRDhCIiBzdHJva2Utd2lkdGg9IjY0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48bGluZSB4MT0iNTEyIiB5MT0iNTEyIiB4Mj0iNjA4IiB5Mj0iNDE2IiBzdHJva2U9IiNGRjNEOEIiIHN0cm9rZS13aWR0aD0iNDAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxjaXJjbGUgY3g9IjUxMiIgY3k9IjUxMiIgcj0iNDAiIGZpbGw9IiNGRjNEOEIiLz48L3N2Zz4=">
 <title>Taskflow · 任务倒计时管理</title>
 <script>
 /* 首帧前锁定深浅色主题（跟随系统），避免闪烁；原生桥接管后由其覆盖 */
@@ -724,6 +725,16 @@ body.perf-lite .pill{
 .card__row + .card__row{margin-top:var(--s3)}
 .card__t{font-size:13.5px; font-weight:650}
 .card__d{font-size:12px; color:var(--on-sv); line-height:1.5; margin-top:2px}
+/* 语言切换：与卡片同宽的两段控件，选中态用 surface 抬起 */
+.lang-seg{display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:var(--s3);
+  padding:3px; background:var(--surface-variant); border-radius:var(--r-full)}
+.lang-seg button{appearance:none; border:0; background:transparent; color:var(--on-sv);
+  font:inherit; font-size:13.5px; font-weight:550; min-height:38px; border-radius:var(--r-full);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease)}
+.lang-seg button[aria-pressed="true"]{background:var(--surface); color:var(--on-bg); font-weight:650;
+  box-shadow:0 1px 3px rgba(15,23,42,.10)}
+html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3px rgba(0,0,0,.38)}
 .progress--lg{height:8px; border-radius:4px; background:var(--progress-track); overflow:hidden}
 .progress--lg > i{display:block; width:0; height:100%; background:var(--primary); border-radius:4px}
 .progress--lg > i.is-on{min-width:8px}
@@ -883,6 +894,15 @@ html.theme-switching{touch-action:none; overscroll-behavior:none}
     <div class="card">
       <div class="card__t">主题</div>
       <div class="card__d">右上角按钮切换深浅色；两套主题共用同一布局。</div>
+    </div>
+
+    <div class="card">
+      <div class="card__t">语言</div>
+      <div class="card__d">切换界面语言，立即生效。</div>
+      <div class="lang-seg" id="langSeg" role="group" aria-label="语言">
+        <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" data-lang="en" aria-pressed="false">English</button>
+      </div>
     </div>
 
     <div class="card hidden" id="rowDynamic">
@@ -1202,10 +1222,348 @@ const BACKUP_KEY  = 'taskflow.backup.v1';
 const SCHEMA_VERSION = 2;
 const TICK_MS     = 250;
 
+/* ---------------- i18n（中文 / English） ----------------
+   msgid 采用中文原文（gettext 风格），缺翻译时自动回退中文。
+   静态文案：applyStatic() 遍历 DOM 文本与属性，首次记录中文原文，之后按原文查表；
+   动态文案：生成处调用 T() / Tn()（Tn 支持 {name} 占位符）。
+   语言偏好存 prefs.lang：'auto' 跟随系统，'zh' / 'en' 手动指定。 */
+const I18N_EN = {
+    "倒计时任务管理": "Countdown task manager",
+    "任务": "Tasks",
+    "统计": "Stats",
+    "我的": "Me",
+    "新建": "New",
+    "新建任务": "New task",
+    "编辑任务": "Edit task",
+    "删除任务？": "Delete task?",
+    "此操作无法撤销。": "This cannot be undone.",
+    "删除": "Delete",
+    "取消": "Cancel",
+    "保存": "Save",
+    "保存修改": "Save changes",
+    "已保存修改": "Changes saved",
+    "修改后保存，倒计时进度会按新设置重新计算。": "Saving recalculates the countdown using the new settings.",
+    "为任务设置一个倒计时，或指定截止时间。": "Give the task a countdown, or set a deadline.",
+    "任务标题 *": "Task title *",
+    "备注（可选）": "Notes (optional)",
+    "高": "High",
+    "中": "Medium",
+    "低": "Low",
+    "高优先级": "High priority",
+    "中优先级": "Medium priority",
+    "低优先级": "Low priority",
+    "时间模式": "Time mode",
+    "倒计时": "Countdown",
+    "设定时长，开始后倒数": "Set a duration, count down",
+    "截止时间": "Deadline",
+    "指定日期时刻，倒计时到点": "Count down to a date/time",
+    "番茄钟": "Pomodoro",
+    "专注与休息交替，多轮推进": "Focus and break cycles",
+    "时长": "Duration",
+    "小时": "hours",
+    "分钟": "minutes",
+    "日期": "Date",
+    "时刻": "Time",
+    "1 小时后": "In 1 hour",
+    "今天 23:59": "Today 23:59",
+    "明天 09:00": "Tomorrow 09:00",
+    "5 分钟": "5 min",
+    "15 分钟": "15 min",
+    "25 分钟": "25 min",
+    "45 分钟": "45 min",
+    "1 小时": "1 hour",
+    "2 小时": "2 hours",
+    "番茄钟参数": "Pomodoro settings",
+    "经典 25+5": "Classic 25+5",
+    "深度 50+10": "Deep 50+10",
+    "自定义": "Custom",
+    "专注（分钟）": "Focus (min)",
+    "短休息": "Short break",
+    "长休息": "Long break",
+    "轮数": "Rounds",
+    "保存后立即开始计时": "Start counting down right after saving",
+    "关闭则先保存为「未开始」，稍后手动启动": "Off: saved as \"Not started\", start it later",
+    "到期时提示音 + 系统通知": "Sound + system notification when due",
+    "关闭后仍会弹出页面内提醒": "In-page alerts still appear when this is off",
+    "提前预警": "Early warning",
+    "不预警": "No warning",
+    "剩 1 分钟": "1 min left",
+    "剩 5 分钟": "5 min left",
+    "剩 10 分钟": "10 min left",
+    "倒计时结束": "Countdown finished",
+    "排序方式": "Sort by",
+    "剩余时间": "Time left",
+    "优先级": "Priority",
+    "创建时间": "Created",
+    "标题": "Title",
+    "分组方式": "Group by",
+    "不分组": "None",
+    "按优先级": "Priority",
+    "按状态": "Status",
+    "仅看状态": "Show only",
+    "全部": "All",
+    "进行中": "Active",
+    "已完成": "Done",
+    "不限": "Any",
+    "清除筛选": "Clear filter",
+    "主题": "Theme",
+    "右上角按钮切换深浅色；两套主题共用同一布局。": "Use the button in the top-right to switch themes; both share the same layout.",
+    "动态取色": "Dynamic colour",
+    "跟随壁纸生成强调色，背景保持中性": "Accent colour derived from the wallpaper; backgrounds stay neutral",
+    "数据": "Data",
+    "全部数据保存在本机，不上传服务器。": "All data is stored on this device and never uploaded.",
+    "语言": "Language",
+    "切换界面语言，立即生效。": "Switch the interface language. Applies immediately.",
+    "两种时间模式": "Two time modes",
+    "倒计时：设定时长（如 25 分钟），开始后倒数。截止时间：指定日期时刻，剩余时间实时递减。": "Countdown: set a duration (25 minutes, say) and it counts down once started. Deadline: pick a date and time; the remaining time ticks down in real time.",
+    "暂停与恢复": "Pause and resume",
+    "倒计时可暂停，暂停期间剩余时间冻结，恢复后接着走，刷新页面不丢进度。截止时间模式不可暂停。": "A countdown can be paused: the remainder freezes, resumes where it stopped, and survives a reload. Deadline mode cannot be paused.",
+    "提醒": "Reminders",
+    "倒计时归零或截止时间到达时，页面内始终弹出提醒；开启「提示音 + 系统通知」还会响铃并在授权后发送系统通知。": "When a countdown hits zero or a deadline arrives, an in-page alert always appears. With \"Sound + system notification\" on, it also chimes and posts a system notification once permitted.",
+    "排序与分组": "Sorting and grouping",
+    "任务页右上「排序」菜单可切换排序方式、分组方式与状态筛选。": "The \"Sort\" menu in the top-right of the task page switches sorting, grouping and status filtering.",
+    "导出备份": "Export backup",
+    "导入备份": "Import backup",
+    "清空全部数据": "Erase all data",
+    "自动快照": "Automatic snapshot",
+    "存储": "Storage",
+    "版本": "Version",
+    "关于": "About",
+    "外观": "Appearance",
+    "帮助": "Help",
+    "计时中": "Running",
+    "倒计时中": "Counting down",
+    "已暂停": "Paused",
+    "已到期": "Overdue",
+    "未开始": "Not started",
+    "距截止": "Due in",
+    "距截止（未开始）": "Due in (not started)",
+    "今日专注": "Focused today",
+    "累计专注": "Total focus",
+    "完成率": "Completion",
+    "按优先级分布": "By priority",
+    "查看": "View",
+    "撤销": "Undo",
+    "标记完成": "Mark done",
+    "已恢复为未完成": "Marked as not done",
+    "请先取消完成状态": "Clear the done state first",
+    "跳过休息": "Skip break",
+    "已跳过休息": "Break skipped",
+    "延后 1 小时": "Postpone 1 hour",
+    "已延后 1 小时": "Postponed by 1 hour",
+    "延长 5 分钟": "Extend 5 min",
+    "已延长 5 分钟": "Extended by 5 min",
+    "再来一轮": "Another round",
+    "修改截止时间": "Change deadline",
+    "重置计时": "Reset timer",
+    "重置": "Reset",
+    "已重置提醒状态": "Reminder state reset",
+    "已重置到第 1 轮专注": "Reset to focus round 1",
+    "请填写任务标题": "Please enter a task title",
+    "请设置大于 0 的时长": "Duration must be greater than zero",
+    "请选择截止日期": "Please choose a due date",
+    "截止时间无效": "Invalid deadline",
+    "保存失败：": "Save failed: ",
+    "格式不正确": "Invalid format",
+    "读取本地数据失败，已从空列表开始": "Could not read local data; starting from an empty list",
+    "导出失败：": "Export failed: ",
+    "导入失败：": "Import failed: ",
+    "导入失败：不是有效的 JSON": "Import failed: not valid JSON",
+    "不是 Taskflow 备份文件": "Not a Taskflow backup file",
+    "文件内容不是对象": "File content is not an object",
+    "缺少 schemaVersion": "Missing schemaVersion",
+    "没有可导入的任务": "No importable tasks",
+    "含已删除任务": "includes deleted tasks",
+    "已清空全部数据": "All data erased",
+    "覆盖会清空当前全部数据，确定继续吗？": "Replacing erases all current data. Continue?",
+    "再次确认：真的要清空全部数据吗？": "Confirm once more: erase all data?",
+    "有任务在离线期间到期": "Tasks came due while you were away",
+    "已到期或超时": "Overdue or past its time",
+    "没有符合筛选的任务": "No tasks match the filter",
+    "当前标签与状态筛选下没有任务，可清除筛选或切换标签。": "No tasks under this tab and filter. Clear the filter or switch tabs.",
+    "当前没有任何任务": "No tasks yet",
+    "还没有任务": "No tasks yet",
+    "点击右下角「新建」，为它设置倒计时或截止时间。": "Tap \"New\" at the bottom right to give it a countdown or a deadline.",
+    "还没有完成记录": "No completed tasks yet",
+    "还没有专注记录": "No focus records yet",
+    "按 N 新建任务": "Press N for a new task",
+    "系统通知：已授权 ✓": "System notifications: allowed ✓",
+    "系统通知：未授权 · 点击此处授权": "System notifications: not allowed · tap to allow",
+    "系统通知：未授权 · 可在系统设置中开启": "System notifications: not allowed · enable in system settings",
+    "系统通知：已被拒绝（可在浏览器地址栏站点设置中恢复）": "System notifications: blocked (re-enable in the browser's site settings)",
+    "系统通知：未授权 · 点击页面任意处时会询问": "System notifications: not allowed · you will be asked on the next tap",
+    "当前环境不支持系统通知，将仅使用页面内提醒": "System notifications are unavailable here; in-page alerts only",
+    "系统通知已被浏览器拒绝，将在页面内提醒": "System notifications are blocked; using in-page alerts",
+    "未授予通知权限，将仅使用页面内提醒": "Notification permission not granted; in-page alerts only",
+    "已开启系统通知": "System notifications enabled",
+    "Taskflow · 任务到期提醒": "Taskflow · Task due",
+    "日一二三四五六": "SMTWTFS",
+    "倒计时结束或截止时间到达时提醒你": "Remind me when the countdown ends or the deadline arrives",
+    "已切换为中文": "Switched to Chinese",
+    "{n} 项": "{n} items",
+    "「{title}」即将到期": "\"{title}\" is due soon",
+    "专注 · 第 {a}/{b} 轮": "Focus · round {a}/{b}",
+    "剩余约 {t}": "About {t} left",
+    "将删除全部 {n} 个任务，且无法恢复。确定继续吗？": "This deletes all {n} tasks and cannot be undone. Continue?",
+    "将导入 {n} 个任务。\\n\\n确定 = 合并（按 id 去重，保留较新的）\\n取消 = 覆盖": "Import {n} tasks.\\n\\nOK = merge (dedupe by id, keep the newer)\\nCancel = replace all",
+    "已删除「{title}」": "Deleted \"{title}\"",
+    "已完成 {n} 轮": "Completed {n} rounds",
+    "已完成「{title}」": "Completed \"{title}\"",
+    "已导入，共 {n} 个任务": "Imported {n} tasks",
+    "已导出 {name}": "Exported {name}",
+    "已开始新一轮「{title}」": "Started a new round of \"{title}\"",
+    "已暂停 · 已专注 {t}": "Paused · {t} focused",
+    "已重置为 {t}": "Reset to {t}",
+    "排序：{v}": "Sort: {v}",
+    "第 {n} 个任务 mode 不合法": "Task #{n} has an invalid mode",
+    "第 {n} 个任务字段不合法": "Task #{n} has invalid fields",
+    "，并暂停了 {n} 个任务": ", paused {n} tasks",
+    "备份版本过新（v{v}）": "Backup is from a newer version (v{v})",
+    "sessions 字段不合法": "Invalid \"sessions\" field",
+    "tasks 字段缺失": "Missing \"tasks\" field",
+    "Taskflow · 任务倒计时管理": "Taskflow · Countdown Task Manager",
+    "中文": "中文",
+    "主导航": "Main navigation",
+    "任务分类": "Task categories",
+    "全部任务": "All tasks",
+    "关闭提醒": "Dismiss reminder",
+    "切换深浅色主题": "Toggle light / dark theme",
+    "到期时提示音和系统通知": "Sound and system notification when due",
+    "开始计时": "Start",
+    "暂停计时": "Pause",
+    "截止时间任务无需开始": "Deadline tasks start on their own",
+    "更多操作": "More actions",
+    "排序：剩余时间": "Sort: Time left",
+    "专注": "Focus",
+    "完成": "Done",
+    "截止": "Due",
+    "编辑": "Edit",
+    "筛选{label}": "Filter: {label}",
+    "存储：约 {kb} KB · 共 {n} 个任务": "Storage: ~{kb} KB · {n} tasks"
+  };
+
+let LANG = (function(){
+  try{
+    const raw = localStorage.getItem('taskflow.prefs.v1');
+    if (raw){ const p = JSON.parse(raw); if (p && (p.lang === 'zh' || p.lang === 'en')) return p.lang; }
+  }catch(_){}
+  return sysLang();
+})();
+
+function sysLang(){
+  try{
+    const list = (navigator.languages && navigator.languages.length)
+      ? navigator.languages : [navigator.language || ''];
+    for (let i = 0; i < list.length; i++){
+      const l = String(list[i] || '').toLowerCase();
+      if (!l) continue;
+      if (l.indexOf('zh') === 0) return 'zh';
+      return 'en';
+    }
+  }catch(_){}
+  return 'zh';
+}
+function resolveLang(v){
+  if (v === 'zh' || v === 'en') return v;
+  return sysLang();
+}
+function T(str){
+  if (LANG === 'zh') return str;
+  const en = I18N_EN[str];
+  return (en == null) ? str : en;
+}
+function Tn(str, vars){
+  let r = T(str);
+  if (vars) for (const k in vars) r = r.split('{' + k + '}').join(String(vars[k]));
+  return r;
+}
+
+const ZH_TEXT = new WeakMap();
+const ZH_ATTR = new WeakMap();
+const CJK = /[\u4e00-\u9fff]/;
+
+function applyStatic(){
+  /* 已缓存的节点即使当前是英文也必须处理，否则切回中文时会被 CJK 过滤掉、无法还原 */
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: function(n){
+      const p = n.parentNode;
+      if (!p) return NodeFilter.FILTER_REJECT;
+      if (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE' || p.nodeName === 'TEXTAREA') return NodeFilter.FILTER_REJECT;
+      if (ZH_TEXT.has(n)) return NodeFilter.FILTER_ACCEPT;
+      if (!n.nodeValue || !CJK.test(n.nodeValue)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  while (w.nextNode()) nodes.push(w.currentNode);
+  for (const n of nodes){
+    if (!ZH_TEXT.has(n)) ZH_TEXT.set(n, n.nodeValue);
+    const zh = ZH_TEXT.get(n);
+    const key = zh.trim();
+    if (!key) continue;
+    const en = I18N_EN[key];
+    n.nodeValue = (LANG === 'en' && en) ? zh.replace(key, en) : zh;
+  }
+
+  const els = document.querySelectorAll('[aria-label],[placeholder],[title]');
+  for (let i = 0; i < els.length; i++){
+    const el = els[i];
+    for (const a of ['aria-label', 'placeholder', 'title']){
+      const cur = el.getAttribute(a);
+      let store = ZH_ATTR.get(el);
+      if (!store){ store = {}; ZH_ATTR.set(el, store); }
+      if (store[a] == null){
+        if (!cur || !CJK.test(cur)) continue;   // 从未缓存过、且不含中文 → 不是需要翻译的属性
+        store[a] = cur;
+      }
+      const zh = store[a];
+      const en = I18N_EN[zh.trim()];
+      el.setAttribute(a, (LANG === 'en' && en) ? en : zh);
+    }
+  }
+
+  document.documentElement.lang = (LANG === 'zh') ? 'zh-CN' : 'en';
+  document.title = (LANG === 'zh') ? T('Taskflow · 任务倒计时管理') : 'Taskflow · Countdown Task Manager';
+
+  const seg = document.getElementById('langSeg');
+  if (seg) Array.prototype.forEach.call(seg.children, function(b){
+    b.setAttribute('aria-pressed', String(b.dataset.lang === LANG));
+  });
+}
+
+function repaint(){
+  try{ renderAnimated(); }catch(_){}
+  try{ paintStats(); }catch(_){}
+  try{ paintSortMenu(); }catch(_){}
+  try{ paintHints(); }catch(_){}
+  try{ syncUI(); }catch(_){}
+}
+
+function setLang(v){
+  prefs.lang = v;
+  savePrefs();
+  LANG = resolveLang(v);
+  applyStatic();
+  repaint();
+  toast(LANG === 'zh' ? T('已切换为中文') : 'Language: English');
+}
+
+function bindLangSeg(){
+  const seg = document.getElementById('langSeg');
+  if (!seg) return;
+  seg.addEventListener('click', function(e){
+    const b = e.target.closest ? e.target.closest('button[data-lang]') : null;
+    if (!b) return;
+    if (b.dataset.lang === LANG && prefs.lang !== 'auto') return;
+    setLang(b.dataset.lang);
+  });
+}
+
+
 /* ---------------- State ---------------- */
 let tasks = [];
 let sessions = [];
-let prefs = { sort:'deadline', group:'none', view:'all', running:'all', theme:'auto' };
+let prefs = { sort:'deadline', group:'none', view:'all', running:'all', theme:'auto', lang:'auto' };
 let editingId = null;
 let pendingDeleteId = null;
 let editor = { mode:'duration', priority:'medium', autoStart:true, notify:true, alertAhead:300 };
@@ -1258,26 +1616,33 @@ function fmtDuration(ms){
   const h = Math.floor(s%86400/3600);
   const m = Math.floor(s%3600/60);
   const sec = s%60;
-  if (d > 0)  return { text:`${d}天 ${pad(h)}:${pad(m)}:${pad(sec)}`, unit:'' };
+  const dayTag = (LANG === 'en') ? 'd ' : '天 ';
+  if (d > 0)  return { text:`${d}${dayTag}${pad(h)}:${pad(m)}:${pad(sec)}`, unit:'' };
   if (h > 0)  return { text:`${h}:${pad(m)}:${pad(sec)}`, unit:'' };
   if (m > 0)  return { text:`${m}:${pad(sec)}`, unit:'' };
-  return { text:`${sec}`, unit:'秒' };
+  return { text:`${sec}`, unit:(LANG === 'en') ? 's' : '秒' };
 }
 
 function relTime(ts){
   const diff = ts - now();
   const abs = Math.abs(diff);
   const s = Math.round(abs/1000);
+  const en = LANG === 'en';
   let v;
-  if (s < 60) v = s + ' 秒';
-  else if (s < 3600) v = Math.round(s/60) + ' 分钟';
-  else if (s < 86400) v = (s/3600).toFixed(1).replace(/\.0$/,'') + ' 小时';
-  else v = Math.round(s/86400) + ' 天';
+  if (s < 60) v = s + (en ? 's' : '秒');
+  else if (s < 3600) v = Math.round(s/60) + (en ? 'm' : '分钟');
+  else if (s < 86400) v = (s/3600).toFixed(1).replace(/\.0$/,'') + (en ? 'h' : '小时');
+  else v = Math.round(s/86400) + (en ? 'd' : '天');
+  if (en) return diff >= 0 ? ('in ' + v) : (v + ' ago');
   return diff >= 0 ? v + '后' : v + '前';
 }
 
 function fmtAbs(ts){
   const d = new Date(ts);
+  if (LANG === 'en'){
+    const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    return `${mon} ${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   return `${d.getMonth()+1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
@@ -1308,7 +1673,7 @@ function save(){
     localStorage.setItem(STORAGE_KEY, payload);
     lastWritten = payload;
   }catch(e){
-    toast('保存失败：' + e.message, null, true);
+    toast(T('保存失败：') + e.message, null, true);
   }
 }
 /* 检测 localStorage 是否被其他标签页/外部修改 —— 若是，则用外部数据替换内存，
@@ -1374,7 +1739,7 @@ function loadStore(){
     const ses = Array.isArray(data.sessions) ? data.sessions : [];
     return { tasks: hydrate(arr), sessions: ses.filter(x => x && x.id && x.startAt) };
   }catch(e){
-    toast('读取本地数据失败，已从空列表开始', null, true);
+    toast(T('读取本地数据失败，已从空列表开始'), null, true);
     return { tasks: [], sessions: [] };
   }
 }
@@ -1433,7 +1798,7 @@ function onTick(){
       if (rem > 0 && rem <= t.alertAhead * 1000){
         t.warned = true; changed = true;
         const f = fmtDuration(rem);
-        notify(t, '「' + t.title + '」即将到期', '剩余约 ' + f.text + f.unit, 'warn');
+        notify(t, Tn('「{title}」即将到期', { title: t.title }), Tn('剩余约 {t}', { t: f.text + f.unit }), 'warn');
       }
     }
 
@@ -1528,21 +1893,21 @@ function paintTaskCard(card, t){
 function cdLabel(t, rem){
   const at = now();
   const st = resolveStatus(t, at);
-  if (st === ST.DONE) return '已完成';
+  if (st === ST.DONE) return T('已完成');
 
   if (t.mode === 'pomodoro'){
     const rounds = (t.pomo && t.pomo.rounds) || 4;
-    if (st === ST.EXPIRED) return '已完成 ' + rounds + ' 轮';
-    if (st === ST.PAUSED)  return '已暂停 · 已专注 ' + fmtAccum(t.accumulatedMs);
+    if (st === ST.EXPIRED) return Tn('已完成 {n} 轮', { n: rounds });
+    if (st === ST.PAUSED)  return Tn('已暂停 · 已专注 {t}', { t: fmtAccum(t.accumulatedMs) });
     const ph = phaseAt(t, at);
-    if (ph.kind === 'focus') return '专注 · 第 ' + ph.round + '/' + rounds + ' 轮';
-    return ph.kind === 'long' ? '长休息' : '短休息';
+    if (ph.kind === 'focus') return Tn('专注 · 第 {a}/{b} 轮', { a: ph.round, b: rounds });
+    return ph.kind === 'long' ? T('长休息') : T('短休息');
   }
 
-  if (st === ST.EXPIRED) return '已到期';
-  if (st === ST.PAUSED)  return '已暂停 · 已专注 ' + fmtAccum(t.accumulatedMs);
-  if (st === ST.RUNNING) return t.mode === 'deadline' ? '距截止' : '倒计时中';
-  return t.mode === 'deadline' ? '距截止（未开始）' : '未开始';
+  if (st === ST.EXPIRED) return T('已到期');
+  if (st === ST.PAUSED)  return Tn('已暂停 · 已专注 {t}', { t: fmtAccum(t.accumulatedMs) });
+  if (st === ST.RUNNING) return t.mode === 'deadline' ? T('距截止') : T('倒计时中');
+  return t.mode === 'deadline' ? T('距截止（未开始）') : T('未开始');
 }
 
 function paintCountdown(el, t, rem){
@@ -1575,7 +1940,7 @@ function paintCountdown(el, t, rem){
 
 /* ---------------- Reminder ---------------- */
 function fireAlert(t){
-  notify(t, '倒计时结束', `「${t.title}」已到期，请查看。`, 'alert');
+  notify(t, T('倒计时结束'), `「${t.title}」已到期，请查看。`, 'alert');
 }
 function notify(t, title, body, kind){
   // 页面内横幅始终显示 —— 它是唯一不依赖任何权限的提醒方式。
@@ -1620,7 +1985,7 @@ function sendSystemNotification(title, body){
 window.__nativeNotifyPermission = function(granted){
   try{
     if (typeof paintHints === 'function') paintHints();
-    toast(granted ? '已开启系统通知' : '未授予通知权限，将仅使用页面内提醒', null, !granted);
+    toast(granted ? T('已开启系统通知') : T('未授予通知权限，将仅使用页面内提醒'), null, !granted);
   }catch(_){}
 };
 /* 硬件返回键：优先关闭已打开的弹窗，返回 true 表示由网页层消费 */
@@ -2047,7 +2412,7 @@ function resolveStatus(t, nowTs){
   return ST.IDLE;
 }
 
-const STATUS_LABEL = { IDLE:'未开始', RUNNING:'计时中', PAUSED:'已暂停', EXPIRED:'已到期', DONE:'已完成' };
+const STATUS_LABEL = { IDLE:T('未开始'), RUNNING:T('计时中'), PAUSED:T('已暂停'), EXPIRED:T('已到期'), DONE:T('已完成') };
 
 /* 只允许一个倒计时 / 番茄钟处于 RUNNING；截止模式不参与 */
 function autoPauseOthers(exceptId){
@@ -2075,8 +2440,8 @@ function autoPauseOthers(exceptId){
 
 function startTask(t){
   if (!t) return;
-  if (resolveStatus(t) === ST.DONE){ toast('请先取消完成状态'); return; }
-  if (t.mode === 'deadline'){ toast('截止时间任务无需开始'); return; }
+  if (resolveStatus(t) === ST.DONE){ toast(T('请先取消完成状态')); return; }
+  if (t.mode === 'deadline'){ toast(T('截止时间任务无需开始')); return; }
 
   const paused = autoPauseOthers(t.id);
 
@@ -2109,7 +2474,7 @@ function startTask(t){
 
   if (paused.length){
     const names = paused.map(function(x){ return '「' + x.title + '」'; }).join('、');
-    toast('已暂停' + names, { label:'撤销', fn: function(){
+    toast(T('已暂停') + names, { label:T('撤销'), fn: function(){
       paused.forEach(function(x){
         if (x.mode === 'duration'){
           x._baseRemaining = x.remainingMs;
@@ -2162,7 +2527,7 @@ function askDelete(id){
 
   const entry = { t: snapshot, idx: idx };
   pendingDeletes.set(id, entry);
-  entry.dismiss = toast('已删除「' + t.title + '」', { label:'撤销', fn: function(){
+  entry.dismiss = toast(Tn('已删除「{title}」', { title: t.title }), { label:T('撤销'), fn: function(){
     const e = pendingDeletes.get(id);
     if (!e) return;
     pendingDeletes.delete(id);
@@ -2190,16 +2555,16 @@ let animateNextRender = false;
 function renderAnimated(){ animateNextRender = true; render(); }
 
 const PRI_META = {
-  high:   { label:'高优先级', short:'高', cls:'p-high' },
-  medium: { label:'中优先级', short:'中', cls:'p-medium' },
-  low:    { label:'低优先级', short:'低', cls:'p-low' }
+  high:   { label:T('高优先级'), short:T('高'), cls:'p-high' },
+  medium: { label:T('中优先级'), short:T('中'), cls:'p-medium' },
+  low:    { label:T('低优先级'), short:T('低'), cls:'p-low' }
 };
 const STATUS_META = {
-  running:  { label:'计时中' },
-  paused:   { label:'已暂停' },
-  idle:     { label:'未开始' },
-  finished: { label:'已到期' },
-  done:     { label:'已完成' }
+  running:  { label:T('计时中') },
+  paused:   { label:T('已暂停') },
+  idle:     { label:T('未开始') },
+  finished: { label:T('已到期') },
+  done:     { label:T('已完成') }
 };
 /* 任务卡五态（单一来源）：未开始 / 计时中 / 已暂停 / 已完成 / 已超时 */
 function stateKeyOf(t){
@@ -2267,7 +2632,7 @@ function groupTasks(arr){
   if (prefs.group === 'none') return [{ label:null, items:arr }];
   const order = prefs.group === 'priority'
     ? [['high',PRI_META.high.label],['medium',PRI_META.medium.label],['low',PRI_META.low.label]]
-    : [['running','计时中'],['paused','已暂停'],['idle','未开始'],['finished','已到期'],['done','已完成']];
+    : [['running',T('计时中')],['paused',T('已暂停')],['idle',T('未开始')],['finished',T('已到期')],['done',T('已完成')]];
   const out = [];
   for (const [key, label] of order){
     const items = prefs.group === 'priority'
@@ -2283,7 +2648,7 @@ function emptyHTML(title, desc, withClear){
     + '<div class="empty__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 10h8M8 14h5"/></svg></div>'
     + '<h3>' + esc(title) + '</h3>'
     + '<p>' + esc(desc) + '</p>'
-    + (withClear ? '<button class="btn btn--tonal" id="clearFilter" type="button">清除筛选</button>' : '')
+    + (withClear ? ('<button class="btn btn--tonal" id="clearFilter" type="button">' + T("清除筛选") + '</button>') : '')
     + '</div>';
 }
 
@@ -2302,13 +2667,13 @@ function render(){
   const p = pipeline();
   paintStats(p.stats);
   paintSortMenu();
-  $('#countPill').textContent = p.arr.length + ' 项';
+  $('#countPill').textContent = Tn('{n} 项', { n: p.arr.length });
 
   const area = $('#listArea');
   if (!p.all.length){
-    area.innerHTML = emptyHTML('还没有任务', '点击右下角「新建」，为它设置倒计时或截止时间。');
+    area.innerHTML = emptyHTML(T('还没有任务'), T('点击右下角「新建」，为它设置倒计时或截止时间。'));
   } else if (!p.arr.length){
-    area.innerHTML = emptyHTML('没有符合筛选的任务', '当前标签与状态筛选下没有任务，可清除筛选或切换标签。', true);
+    area.innerHTML = emptyHTML(T('没有符合筛选的任务'), T('当前标签与状态筛选下没有任务，可清除筛选或切换标签。'), true);
     const b = $('#clearFilter');
     if (b) b.onclick = function(){
       prefs.view = 'all'; prefs.running = 'all'; syncUI(); renderAnimated(); savePrefs();
@@ -2351,7 +2716,7 @@ function chartSeries(){
         return resolveStatus(t) === ST.DONE && t.completedAt >= start && t.completedAt < end;
       }).length;
     }
-    out.push({ v: v, label: '日一二三四五六'[d.getDay()], today: i === 0 });
+    out.push({ v: v, label: T('日一二三四五六')[d.getDay()], today: i === 0 });
   }
   return out;
 }
@@ -2374,7 +2739,7 @@ function chartHTML(){
   const sum = data.reduce(function(a, x){ return a + x.v; }, 0);
   if (!sum){
     return '<div class="chart__empty">'
-      + (chartMode === 'focus' ? '还没有专注记录' : '还没有完成记录') + '</div>';
+      + (chartMode === 'focus' ? T('还没有专注记录') : T('还没有完成记录')) + '</div>';
   }
   const max = Math.max.apply(null, data.map(function(x){ return x.v; }));
   const cols = data.map(function(x){
@@ -2418,7 +2783,7 @@ function updateChart(){
     const hasDeleted = chartMode === 'focus' && sessions.some(function(x){
       return !tasks.some(function(t){ return t.id === x.taskId; });
     });
-    hint.textContent = hasDeleted ? '含已删除任务' : '';
+    hint.textContent = hasDeleted ? T('含已删除任务') : '';
   }
 }
 
@@ -2427,9 +2792,9 @@ function renderStatsPage(s){
   if (!box) return;
   const pct = s.total ? Math.round(s.done / s.total * 100) : 0;
   const pr = [
-    { l:'高', n: tasks.filter(function(t){ return t.priority === 'high'; }).length },
-    { l:'中', n: tasks.filter(function(t){ return t.priority === 'medium'; }).length },
-    { l:'低', n: tasks.filter(function(t){ return t.priority === 'low'; }).length }
+    { l:T('高'), n: tasks.filter(function(t){ return t.priority === 'high'; }).length },
+    { l:T('中'), n: tasks.filter(function(t){ return t.priority === 'medium'; }).length },
+    { l:T('低'), n: tasks.filter(function(t){ return t.priority === 'low'; }).length }
   ];
   const maxN = Math.max(1, pr[0].n, pr[1].n, pr[2].n);
 
@@ -2453,35 +2818,35 @@ function renderStatsPage(s){
   box.innerHTML = '<div class="stat-page">'
     /* 1) 专注：今日 / 累计 */
     + '<div class="stat-grid">'
-    +   num(fmtHM(todayMs), '今日专注', false)
-    +   num(fmtHM(focusTotal()), '累计专注', false)
+    +   num(fmtHM(todayMs), T('今日专注'), false)
+    +   num(fmtHM(focusTotal()), T('累计专注'), false)
     + '</div>'
     /* 2) 任务计数 2×2 */
     + '<div class="stat-grid">'
-    +   num(s.total, '全部任务', false)
-    +   num(s.running, '计时中', false)
-    +   num(s.overdue, '已到期', s.overdue > 0)
-    +   num(s.done, '已完成', false)
+    +   num(s.total, T('全部任务'), false)
+    +   num(s.running, T('计时中'), false)
+    +   num(s.overdue, T('已到期'), s.overdue > 0)
+    +   num(s.done, T('已完成'), false)
     + '</div>'
     /* 3) 近 7 天：专注 / 完成 */
     + '<div class="stat-card">'
     +   '<div class="stat-card__head">'
     +     '<div class="mini-seg" id="chartSeg">'
-    +       '<button type="button" data-chart="focus" aria-pressed="' + (chartMode === 'focus') + '">专注</button>'
-    +       '<button type="button" data-chart="done" aria-pressed="' + (chartMode === 'done') + '">完成</button>'
+    +       '<button type="button" data-chart="focus" aria-pressed="' + (chartMode === 'focus') + ('">' + T("专注") + '</button>')
+    +       '<button type="button" data-chart="done" aria-pressed="' + (chartMode === 'done') + ('">' + T("完成") + '</button>')
     +     '</div>'
-    +     '<span class="chart__hint" id="chartHint">' + (hasDeleted && chartMode === 'focus' ? '含已删除任务' : '') + '</span>'
+    +     '<span class="chart__hint" id="chartHint">' + (hasDeleted && chartMode === 'focus' ? T('含已删除任务') : '') + '</span>'
     +   '</div>'
     +   '<div class="chart" id="chartBody">' + chartHTML() + '</div>'
     + '</div>'
     /* 4) 完成率 */
     + '<div class="stat-card">'
-    +   '<div class="card__row"><span class="card__t">完成率</span><b class="num">' + pct + '%</b></div>'
+    +   ('<div class="card__row"><span class="card__t">' + T("完成率") + '</span><b class="num">') + pct + '%</b></div>'
     +   '<div class="progress--lg"><i class="' + (pct > 0 ? 'is-on' : '') + '" style="width:' + pct + '%"></i></div>'
     + '</div>'
     /* 5) 优先级分布 */
     + '<div class="stat-card">'
-    +   '<div class="card__t">按优先级分布</div>'
+    +   ('<div class="card__t">' + T("按优先级分布") + '</div>')
     +   '<div class="dist-list">' + pr.map(function(x){
           return '<div class="dist"><span class="dist__l">' + x.l + '</span>'
             + '<span class="dist__bar"><i class="' + (x.n > 0 ? 'is-on' : '')
@@ -2518,25 +2883,25 @@ function taskHTML(t){
   const timeText = t.mode === 'pomodoro' ? fmtDuration(phaseAt(t, at).remain).text : fmtDuration(remain).text;
 
   const durChip = t.mode === 'deadline'
-    ? '<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>截止 ' + esc(fmtAbs(t.dueAt)) + '</span>'
+    ? ('<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>' + T("截止") + ' ') + esc(fmtAbs(t.dueAt)) + '</span>'
     : t.mode === 'pomodoro'
       ? '<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/></svg>' + Math.round(t.pomo.focusMs/60000) + '+' + Math.round(t.pomo.shortMs/60000) + ' × ' + t.pomo.rounds + '</span>'
-      : '<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/></svg>时长 ' + esc(fmtDuration(t.durationMs).text) + '</span>';
+      : ('<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/></svg>' + T("时长") + ' ') + esc(fmtDuration(t.durationMs).text) + '</span>';
 
   let actions = '';
   if (expired){
     actions = '<div class="task__actions">'
       + (t.mode === 'deadline'
-          ? '<button class="btn btn--primary btn--sm" type="button" data-act="postpone">延后 1 小时</button>'
-            + '<button class="btn btn--text btn--sm" type="button" data-act="edit">修改截止时间</button>'
-          : '<button class="btn btn--primary btn--sm" type="button" data-act="again">再来一轮</button>'
-            + '<button class="btn btn--text btn--sm" type="button" data-act="extend">延长 5 分钟</button>')
-      + '<button class="btn btn--text btn--sm" type="button" data-act="toggle-done">标记完成</button>'
+          ? ('<button class="btn btn--primary btn--sm" type="button" data-act="postpone">' + T("延后 1 小时") + '</button>')
+            + ('<button class="btn btn--text btn--sm" type="button" data-act="edit">' + T("修改截止时间") + '</button>')
+          : ('<button class="btn btn--primary btn--sm" type="button" data-act="again">' + T("再来一轮") + '</button>')
+            + ('<button class="btn btn--text btn--sm" type="button" data-act="extend">' + T("延长 5 分钟") + '</button>'))
+      + ('<button class="btn btn--text btn--sm" type="button" data-act="toggle-done">' + T("标记完成") + '</button>')
       + '</div>';
   } else if (t.mode === 'pomodoro' && st === ST.RUNNING){
     const ph = phaseAt(t, at);
     if (ph.kind !== 'focus'){
-      actions = '<div class="task__actions"><button class="btn btn--text btn--sm" type="button" data-act="skip-break">跳过休息</button></div>';
+      actions = ('<div class="task__actions"><button class="btn btn--text btn--sm" type="button" data-act="skip-break">' + T("跳过休息") + '</button></div>');
     }
   }
 
@@ -2544,11 +2909,11 @@ function taskHTML(t){
   + '<article class="task pri-' + t.priority + ' st-' + stKey + (done ? ' is-done' : '') + (isRunning ? ' is-running' : '') + '" data-id="' + t.id + '">'
   +   '<div class="task__head">'
   +     '<button class="check" type="button" role="checkbox" aria-checked="' + done + '" data-act="toggle-done"'
-  +       ' aria-label="标记完成">'
+  +       (' aria-label="' + T("标记完成") + '">')
   +       '<span class="check__box"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></span>'
   +     '</button>'
   +     '<h3 class="task__title">' + esc(t.title) + '</h3>'
-  +     '<button class="more" type="button" data-act="more" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false">'
+  +     ('<button class="more" type="button" data-act="more" aria-label="' + T("更多操作") + '" aria-haspopup="menu" aria-expanded="false">')
   +       '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>'
   +     '</button>'
   +   '</div>'
@@ -2560,7 +2925,7 @@ function taskHTML(t){
   +         '<span class="cd__time">' + esc(timeText) + '</span>'
   +       '</div>'
   +       (canTimer
-          ? '<button class="play" type="button" data-act="toggle-timer" aria-label="' + (isRunning ? '暂停计时' : '开始计时') + '">'
+          ? '<button class="play" type="button" data-act="toggle-timer" aria-label="' + (isRunning ? T('暂停计时') : T('开始计时')) + '">'
             + '<span class="play__circle">' + (isRunning ? PAUSE_ICON : PLAY_ICON) + '</span></button>'
           : '')
   +     '</div>'
@@ -2618,7 +2983,7 @@ function againTask(id){
   t.updatedAt = now();
   const paused = autoPauseOthers(t.id);
   save(); render();
-  toast('已开始新一轮「' + t.title + '」' + (paused.length ? '，并暂停了 ' + paused.length + ' 个任务' : ''));
+  toast(Tn('已开始新一轮「{title}」', { title: t.title }) + (paused.length ? Tn('，并暂停了 {n} 个任务', { n: paused.length }) : ''));
 }
 
 /* 到期动作：延长 5 分钟（总量同步 +5，进度不回退） */
@@ -2645,7 +3010,7 @@ function extendTask(id){
   t.updatedAt = now();
   autoPauseOthers(t.id);
   save(); render();
-  toast('已延长 5 分钟');
+  toast(T('已延长 5 分钟'));
 }
 
 /* 到期动作：截止模式延后 1 小时 */
@@ -2657,7 +3022,7 @@ function postponeTask(id){
   t.completedAt = null;
   t.updatedAt = now();
   save(); render();
-  toast('已延后 1 小时');
+  toast(T('已延后 1 小时'));
 }
 
 /* 番茄钟：跳过休息 */
@@ -2673,7 +3038,7 @@ function skipBreak(id){
   t.phaseStartedAt = at;
   if (t.phaseIndex >= chain.length){ t.status = 'finished'; t.firedAt = at; }
   save(); render();
-  toast('已跳过休息');
+  toast(T('已跳过休息'));
 }
 
 let cardMenuId = null;
@@ -2703,14 +3068,14 @@ function paintStats(s){
   s = s || statsOf(tasks);
   const cell = function(key, val, label, alert){
     return '<button class="stat' + (alert ? ' stat--alert' : '') + '" type="button" data-stat="' + key + '"'
-      + ' aria-label="筛选' + label + '">'
+      + ' aria-label="' + Tn('筛选{label}', { label: label }) + '">'
       + '<span class="stat__num">' + val + '</span>'
       + '<span class="stat__label">' + label + '</span></button>';
   };
   $('#stats').innerHTML =
-      cell('running', s.running, '计时中', false)
-    + cell('overdue', s.overdue, '已到期', s.overdue > 0)
-    + cell('done', s.done, '已完成', false);
+      cell('running', s.running, T('计时中'), false)
+    + cell('overdue', s.overdue, T('已到期'), s.overdue > 0)
+    + cell('done', s.done, T('已完成'), false);
 
   $$('#stats [data-stat]').forEach(function(b){
     b.onclick = function(){
@@ -2727,7 +3092,7 @@ function paintSortMenu(){
   $$('#sortMenu [data-sort]').forEach(function(b){ b.setAttribute('aria-checked', String(b.dataset.sort === prefs.sort)); });
   $$('#sortMenu [data-group]').forEach(function(b){ b.setAttribute('aria-checked', String(b.dataset.group === prefs.group)); });
   $$('#filterItems [data-filter]').forEach(function(b){ b.setAttribute('aria-checked', String(b.dataset.filter === prefs.running)); });
-  $('#sortLabel').textContent = '排序：' + (SORT_LABEL[prefs.sort] || '剩余时间');
+  $('#sortLabel').textContent = Tn('排序：{v}', { v: T(SORT_LABEL[prefs.sort] || '剩余时间') });
 }
 
 /* 状态选项随当前标签变化：只列当前标签下真实存在的状态，无意义项隐藏 */
@@ -2747,10 +3112,10 @@ function paintFilterMenu(all){
     else if (st === ST.RUNNING) present.running = true;
     else if (st === ST.PAUSED) present.paused = true;
   });
-  const opts = [['all','不限']];
-  if (present.running) opts.push(['running','计时中']);
-  if (present.paused)  opts.push(['paused','已暂停']);
-  if (present.overdue) opts.push(['overdue','已到期']);
+  const opts = [['all',T('不限')]];
+  if (present.running) opts.push(['running',T('计时中')]);
+  if (present.paused)  opts.push(['paused',T('已暂停')]);
+  if (present.overdue) opts.push(['overdue',T('已到期')]);
 
   if (opts.length <= 1){
     if (head) head.classList.add('hidden');
@@ -3378,7 +3743,7 @@ function toggleDone(id){
     delete t._preDone;
     t.updatedAt = now();
     save(); render();
-    toast('已恢复为未完成');
+    toast(T('已恢复为未完成'));
     return;
   }
 
@@ -3408,7 +3773,7 @@ function toggleDone(id){
   t.updatedAt = now();
   save(); render();
 
-  toast('已完成「' + t.title + '」', { label:'撤销', fn: function(){
+  toast(Tn('已完成「{title}」', { title: t.title }), { label:T('撤销'), fn: function(){
     const cur = tasks.find(function(x){ return x.id === t.id; });
     if (!cur) return;
     cur.completedAt = null;
@@ -3426,7 +3791,7 @@ function toggleDone(id){
 function toggleTimer(id){
   const t = tasks.find(x => x.id === id); if (!t) return;
   if (t.mode === 'deadline') return;
-  if (resolveStatus(t) === ST.DONE){ toast('请先取消完成状态'); return; }
+  if (resolveStatus(t) === ST.DONE){ toast(T('请先取消完成状态')); return; }
 
   if (t.status === 'running'){
     // 暂停：先结算分段，再冻结
@@ -3462,18 +3827,18 @@ function resetTimer(id){
     t.startedAt = null;
     t.firedAt = null; t.warned = false;
     t.status = 'idle';
-    toast('已重置为 ' + fmtDuration(t.durationMs).text);
+    toast(Tn('已重置为 {t}', { t: fmtDuration(t.durationMs).text }));
   } else if (t.mode === 'pomodoro'){
     t.phaseIndex = 0;
     t.phaseStartedAt = 0;
     delete t._pauseRemain;
     t.firedAt = null; t.warned = false;
     t.status = 'idle';
-    toast('已重置到第 1 轮专注');
+    toast(T('已重置到第 1 轮专注'));
   } else {
     t.firedAt = null;
     if (t.completedAt) { t.completedAt = null; }
-    toast('已重置提醒状态');
+    toast(T('已重置提醒状态'));
   }
   t.updatedAt = now();
   save(); render();
@@ -3489,10 +3854,10 @@ function ensureNotifyPermission(){
       askedPermission = true;
       const p = Notification.requestPermission();
       if (p && p.then) p.then(res => {
-        if (res === 'granted') toast('已开启系统通知');
+        if (res === 'granted') toast(T('已开启系统通知'));
       }).catch(()=>{});
     } else if (Notification.permission === 'denied'){
-      toast('系统通知已被浏览器拒绝，将在页面内提醒', null, true);
+      toast(T('系统通知已被浏览器拒绝，将在页面内提醒'), null, true);
     }
   }catch(_){}
 }
@@ -3513,8 +3878,8 @@ function openEditor(id){
   editingId = id || null;
   const t = id ? tasks.find(x => x.id === id) : null;
 
-  $('#dlgTitle').textContent = t ? '编辑任务' : '新建任务';
-  $('#btnSave').lastChild.textContent = t ? ' 保存修改' : ' 保存';
+  $('#dlgTitle').textContent = t ? T('编辑任务') : T('新建任务');
+  $('#btnSave').lastChild.textContent = t ? T('保存修改') : T('保存');
   $('#inpTitle').value = t ? t.title : '';
   $('#inpDesc').value  = t ? (t.desc || '') : '';
 
@@ -3544,8 +3909,8 @@ function openEditor(id){
   syncEditorUI();
   $('#fTitle').classList.remove('err');
   $('#dlgSub').textContent = t
-    ? '修改后保存，倒计时进度会按新设置重新计算。'
-    : '为任务设置一个倒计时，或指定截止时间。';
+    ? T('修改后保存，倒计时进度会按新设置重新计算。')
+    : T('为任务设置一个倒计时，或指定截止时间。');
 
   openScrim('#dlgScrim');
   setTimeout(() => $('#inpTitle').focus(), 260);
@@ -3569,7 +3934,7 @@ function saveEditor(){
   if (!title){
     $('#fTitle').classList.add('err');
     $('#inpTitle').focus();
-    toast('请填写任务标题', null, true);
+    toast(T('请填写任务标题'), null, true);
     return;
   }
   $('#fTitle').classList.remove('err');
@@ -3587,15 +3952,15 @@ function saveEditor(){
     const m = clamp(parseInt($('#inpM').value,10) || 0, 0, 59);
     durationMs = (h*3600 + m*60) * 1000;
     if (durationMs <= 0){
-      toast('请设置大于 0 的时长', null, true);
+      toast(T('请设置大于 0 的时长'), null, true);
       $('#inpM').focus();
       return;
     }
   } else {
     const dv = $('#inpDate').value, tv = $('#inpTime').value || '23:59';
-    if (!dv){ toast('请选择截止日期', null, true); return; }
+    if (!dv){ toast(T('请选择截止日期'), null, true); return; }
     dueAt = new Date(`${dv}T${tv}:00`).getTime();
-    if (!Number.isFinite(dueAt)){ toast('截止时间无效', null, true); return; }
+    if (!Number.isFinite(dueAt)){ toast(T('截止时间无效'), null, true); return; }
   }
 
   const desc = $('#inpDesc').value.trim();
@@ -3656,7 +4021,7 @@ function saveEditor(){
       if (editor.autoStart && t.status !== 'done') startTask(t);
       else if (!editor.autoStart && t.status === 'running') pauseTask(t);
     }
-    toast('已保存修改');
+    toast(T('已保存修改'));
   } else {
     const t = {
       id: uid(), title, desc,
@@ -3738,31 +4103,31 @@ function exportJSON(){
     };
     const text = JSON.stringify(payload, null, 2);
     const B = window.AndroidBridge;
-    if (B && typeof B.saveFile === 'function'){ B.saveFile(name, text); toast('已导出 ' + name); return; }
+    if (B && typeof B.saveFile === 'function'){ B.saveFile(name, text); toast(Tn('已导出 {name}', { name: name })); return; }
     const blob = new Blob([text], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-    toast('已导出 ' + name);
+    toast(Tn('已导出 {name}', { name: name }));
   }catch(e){
-    toast('导出失败：' + e.message, null, true);
+    toast(T('导出失败：') + e.message, null, true);
   }
 }
 
 function validateBackup(data){
-  if (!data || typeof data !== 'object') return '文件内容不是对象';
-  if (data.app !== 'taskflow') return '不是 Taskflow 备份文件';
-  if (!Number.isFinite(data.schemaVersion)) return '缺少 schemaVersion';
-  if (data.schemaVersion > SCHEMA_VERSION) return '备份版本过新（v' + data.schemaVersion + '）';
-  if (!Array.isArray(data.tasks)) return 'tasks 字段缺失';
+  if (!data || typeof data !== 'object') return T('文件内容不是对象');
+  if (data.app !== 'taskflow') return T('不是 Taskflow 备份文件');
+  if (!Number.isFinite(data.schemaVersion)) return T('缺少 schemaVersion');
+  if (data.schemaVersion > SCHEMA_VERSION) return Tn('备份版本过新（v{v}）', { v: data.schemaVersion });
+  if (!Array.isArray(data.tasks)) return T('tasks 字段缺失');
   for (let i = 0; i < data.tasks.length; i++){
     const t = data.tasks[i];
-    if (!t || typeof t.id !== 'string' || typeof t.title !== 'string') return '第 ' + (i+1) + ' 个任务字段不合法';
-    if (t.mode && ['duration','deadline','pomodoro'].indexOf(t.mode) < 0) return '第 ' + (i+1) + ' 个任务 mode 不合法';
+    if (!t || typeof t.id !== 'string' || typeof t.title !== 'string') return Tn('第 {n} 个任务字段不合法', { n: i + 1 });
+    if (t.mode && ['duration','deadline','pomodoro'].indexOf(t.mode) < 0) return Tn('第 {n} 个任务 mode 不合法', { n: i + 1 });
   }
-  if (data.sessions != null && !Array.isArray(data.sessions)) return 'sessions 字段不合法';
+  if (data.sessions != null && !Array.isArray(data.sessions)) return T('sessions 字段不合法');
   return null;
 }
 
@@ -3770,9 +4135,9 @@ function importJSON(file){
   const fr = new FileReader();
   fr.onload = function(){
     let data;
-    try { data = JSON.parse(fr.result); }catch(e){ toast('导入失败：不是有效的 JSON', null, true); return; }
+    try { data = JSON.parse(fr.result); }catch(e){ toast(T('导入失败：不是有效的 JSON'), null, true); return; }
     const err = validateBackup(data);
-    if (err){ toast('导入失败：' + err, null, true); return; }
+    if (err){ toast(T('导入失败：') + err, null, true); return; }
 
     // 导入前自动备份当前数据（保留最近 1 份）
     try{
@@ -3781,7 +4146,7 @@ function importJSON(file){
       }));
     }catch(_){}
 
-    const merge = confirm('将导入 ' + data.tasks.length + ' 个任务。\n\n确定 = 合并（按 id 去重，保留较新的）\n取消 = 覆盖');
+    const merge = confirm(Tn('将导入 {n} 个任务。\n\n确定 = 合并（按 id 去重，保留较新的）\n取消 = 覆盖', { n: data.tasks.length }));
     if (merge){
       const map = new Map(tasks.map(function(t){ return [t.id, t]; }));
       data.tasks.forEach(function(src){
@@ -3793,7 +4158,7 @@ function importJSON(file){
       const ids = new Set(sessions.map(function(x){ return x.id; }));
       (data.sessions || []).forEach(function(x){ if (!ids.has(x.id)){ sessions.push(x); ids.add(x.id); } });
     } else {
-      if (!confirm('覆盖会清空当前全部数据，确定继续吗？')) return;
+      if (!confirm(T('覆盖会清空当前全部数据，确定继续吗？'))) return;
       tasks = hydrate(data.tasks || []);
       sessions = (data.sessions || []).slice();
     }
@@ -3804,7 +4169,7 @@ function importJSON(file){
     }
     save(); render(); startTick();
     onTick();
-    toast('已导入，共 ' + tasks.length + ' 个任务');
+    toast(Tn('已导入，共 {n} 个任务', { n: tasks.length }));
   };
   fr.readAsText(file);
 }
@@ -3815,7 +4180,7 @@ function importJSON(file){
     try{
       const data = JSON.parse(fr.result);
       const arr = Array.isArray(data) ? data : (data.tasks || []);
-      if (!Array.isArray(arr)) throw new Error('格式不正确');
+      if (!Array.isArray(arr)) throw new Error(T('格式不正确'));
       const cleaned = arr.filter(t => t && t.title).map(t => {
         const c = Object.assign({}, t);
         c.id = c.id || uid();
@@ -3829,13 +4194,13 @@ function importJSON(file){
         c.createdAt = c.createdAt || now();
         return c;
       });
-      if (!cleaned.length) throw new Error('没有可导入的任务');
+      if (!cleaned.length) throw new Error(T('没有可导入的任务'));
       const mode = tasks.length ? confirm(`当前有 ${tasks.length} 个任务。\n\n确定 = 追加导入（合并）\n取消 = 覆盖导入（替换全部）`) : false;
       tasks = tasks.length ? (mode ? tasks.concat(cleaned) : cleaned) : cleaned;
       save(); render(); startTick();
       toast(`已导入 ${cleaned.length} 个任务`);
     }catch(e){
-      toast('导入失败：' + e.message, null, true);
+      toast(T('导入失败：') + e.message, null, true);
     }
   };
   fr.readAsText(file);
@@ -3846,7 +4211,7 @@ function importJSON(file){
 function paintHints(){
   const bytes = (localStorage.getItem(STORAGE_KEY) || '').length;
   const sh = $('#storageHint');
-  if (sh) sh.textContent = `存储：约 ${(bytes/1024).toFixed(1)} KB · 共 ${tasks.length} 个任务`;
+  if (sh) sh.textContent = Tn('存储：约 {kb} KB · 共 {n} 个任务', { kb: (bytes/1024).toFixed(1), n: tasks.length });
 
   const nh = $('#notifyHint');
   if (!nh) return;
@@ -3856,20 +4221,20 @@ function paintHints(){
   if (B && typeof B.notify === 'function'){
     // Android 应用内：以原生权限状态为准
     const ok = !B.isNotificationAvailable || B.isNotificationAvailable();
-    state = ok ? '系统通知：已授权 ✓' : '系统通知：未授权 · 可在系统设置中开启';
+    state = ok ? T('系统通知：已授权 ✓') : T('系统通知：未授权 · 可在系统设置中开启');
     bad = !ok;
     if (!ok && typeof B.requestNotificationPermission === 'function'){
-      state = '系统通知：未授权 · 点击此处授权';
+      state = T('系统通知：未授权 · 点击此处授权');
     }
   } else if (typeof Notification === 'undefined'){
-    state = '当前环境不支持系统通知，将仅使用页面内提醒';
+    state = T('当前环境不支持系统通知，将仅使用页面内提醒');
   } else if (Notification.permission === 'granted'){
-    state = '系统通知：已授权 ✓';
+    state = T('系统通知：已授权 ✓');
   } else if (Notification.permission === 'denied'){
-    state = '系统通知：已被拒绝（可在浏览器地址栏站点设置中恢复）';
+    state = T('系统通知：已被拒绝（可在浏览器地址栏站点设置中恢复）');
     bad = true;
   } else {
-    state = '系统通知：未授权 · 点击页面任意处时会询问';
+    state = T('系统通知：未授权 · 点击页面任意处时会询问');
   }
 
   nh.textContent = state;
@@ -3879,6 +4244,9 @@ function paintHints(){
 function boot(){
   initTheme();             // 主题令牌来自 colors.xml / values-night（无桥时用后备色）
   loadPrefs();
+  LANG = resolveLang(prefs.lang);   // 'auto' 跟随系统语言（zh* → 中文，其余 → English）
+  applyStatic();
+  bindLangSeg();
   const __store = loadStore();
   tasks = __store.tasks;
   sessions = __store.sessions;
@@ -3900,12 +4268,12 @@ function boot(){
     save();
     setTimeout(() => {
       const names = stale.map(t => `「${t.title}」`).join('、');
-      showBanner('有任务在离线期间到期', `${names} 已到期或超时，请及时处理。`, 'alert');
+      showBanner(T('有任务在离线期间到期'), `${names} 已到期或超时，请及时处理。`, 'alert');
       if (stale.some(t => t.notify !== false)){
         beep();
-        sendSystemNotification('Taskflow · 任务到期提醒', `${names} 已到期或超时`);
+        sendSystemNotification(T('Taskflow · 任务到期提醒'), `${names} 已到期或超时`);
       }
-      toast(`${stale.length} 个任务已到期`, { label:'查看', fn: () => { prefs.view='active'; syncUI(); render(); savePrefs(); } });
+      toast(`${stale.length} 个任务已到期`, { label:T('查看'), fn: () => { prefs.view='active'; syncUI(); render(); savePrefs(); } });
     }, 700);
   }
 
@@ -4114,12 +4482,12 @@ function bindGlobal(){
     e.target.value = '';
   };
   $('#btnReset').onclick = function(){
-    if (!tasks.length){ toast('当前没有任何任务'); return; }
-    if (confirm('将删除全部 ' + tasks.length + ' 个任务，且无法恢复。确定继续吗？')){
-      if (confirm('再次确认：真的要清空全部数据吗？')){
+    if (!tasks.length){ toast(T('当前没有任何任务')); return; }
+    if (confirm(Tn('将删除全部 {n} 个任务，且无法恢复。确定继续吗？', { n: tasks.length }))){
+      if (confirm(T('再次确认：真的要清空全部数据吗？'))){
         tasks = []; save(); render();
         paintHints();
-        toast('已清空全部数据');
+        toast(T('已清空全部数据'));
       }
     }
   };
@@ -4147,7 +4515,7 @@ function bindGlobal(){
     }
     if (anyScrimOpen()) return;
     if (e.key === 'n' || e.key === 'N'){ e.preventDefault(); openEditor(null); }
-    if (e.key === '/'){ e.preventDefault(); toast('按 N 新建任务'); }
+    if (e.key === '/'){ e.preventDefault(); toast(T('按 N 新建任务')); }
     if (e.key === ' '){ e.preventDefault(); $('#btnSort').click(); }
   });
 
