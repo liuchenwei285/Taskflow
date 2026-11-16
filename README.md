@@ -7,7 +7,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
 [![Platform: Android](https://img.shields.io/badge/platform-Android%20minSdk24%20%2F%20targetSdk34-3DDC84.svg)](https://developer.android.com/)
-![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)
+![Version](https://img.shields.io/badge/version-2.7.0-5558.svg)
 ![No network permission](https://img.shields.io/badge/network-permission-none-2ea44f.svg)
 
 [English](README.en.md) · **简体中文**
