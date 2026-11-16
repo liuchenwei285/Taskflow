@@ -14,5 +14,5 @@ const src = fs.readFileSync(SRC);
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(OUT, src);
 const out = fs.readFileSync(OUT);
-if (!src.equals(out)) throw new Error('dist/index.html 与源文件不一致，部署产物已损坏');
-console.log('已生成 dist/index.html（' + out.length + ' bytes，与 task-timer-app.html 逐字节一致）');
+if (!src.equals(out)) throw new Error('site/index.html 与源文件不一致，部署产物已损坏');
+console.log('已生成 site/index.html（' + out.length + ' bytes，与 task-timer-app.html 逐字节一致）');
