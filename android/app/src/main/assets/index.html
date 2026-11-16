@@ -735,6 +735,19 @@ body.perf-lite .pill{
 .lang-seg button[aria-pressed="true"]{background:var(--surface); color:var(--on-bg); font-weight:650;
   box-shadow:0 1px 3px rgba(15,23,42,.10)}
 html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3px rgba(0,0,0,.38)}
+/* 自定义主题色：仅浏览器显示；与语言卡片同宽，原生色盘 + 恢复默认按钮 */
+.accent-row{display:flex; align-items:center; justify-content:space-between; gap:var(--s3);
+  margin-top:var(--s3); min-height:48px}
+.accent-row > div:first-child{flex:1; min-width:0}
+.accent-row__ctl{display:flex; align-items:center; gap:var(--s2); flex:none}
+.accent-picker{width:36px; height:36px; padding:0; border:1px solid var(--outline);
+  border-radius:var(--r-sm); background:transparent; cursor:pointer}
+.accent-picker::-webkit-color-swatch-wrapper{padding:3px}
+.accent-picker::-webkit-color-swatch{border:0; border-radius:5px}
+.accent-reset{appearance:none; border:1px solid var(--outline); background:var(--surface);
+  color:var(--on-sv); font:inherit; font-size:12px; min-height:36px; padding:0 var(--s3);
+  border-radius:var(--r-sm); cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease)}
 .progress--lg{height:8px; border-radius:4px; background:var(--progress-track); overflow:hidden}
 .progress--lg > i{display:block; width:0; height:100%; background:var(--primary); border-radius:4px}
 .progress--lg > i.is-on{min-width:8px}
@@ -784,40 +797,10 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
 .alert-banner__t{margin:0; font-size:14px; font-weight:650}
 .alert-banner__s{margin:2px 0 0; font-size:12px; color:var(--on-sv); line-height:1.5}
 
-/* ============ 主题转场：切换瞬间完成，动画只负责「揭开」 ============
-   旧层（快照）在下、新层（已换色的实时画面）在上，两层都是静止画面：
-   关闭默认交叉淡入，只对 ::view-transition-new(root) 做 clip-path 圆形裁剪。 */
-::view-transition-group(root){ animation:none }
-::view-transition-old(root){ z-index:1; animation:none; mix-blend-mode:normal }
-::view-transition-new(root){ z-index:2; animation:none; mix-blend-mode:normal;
-  clip-path:circle(0px at var(--vt-cx, 50%) var(--vt-cy, 50%)) }
-
-/* 转场期间：一次性换色，禁止任何过渡/动画（含伪元素）。
-   这样圆内是「已完成的最终画面」，不会在揭开后继续变色。 */
-html.theme-switching,
-html.theme-switching *,
-html.theme-switching *::before,
-html.theme-switching *::after{
-  transition:none!important;
-  animation:none!important;
-}
-/* 主题切换动画期间：临时移除 backdrop-filter 改不透明纯色，结束后由 CSS 自动恢复 */
-html.theme-switching .pill{
-  -webkit-backdrop-filter:none!important;
-  backdrop-filter:none!important;
-  background:var(--pill-solid)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-html.theme-switching .seg__ind{
-  -webkit-backdrop-filter:none!important; backdrop-filter:none!important;
-  background:var(--thumb-solid)!important;
-  box-shadow:none!important;
-}
-html.theme-switching .fab,
-html.theme-switching .task{box-shadow:none!important}
-/* 动画期间禁止触摸滚动（不改布局，不触发重排） */
-html.theme-switching{touch-action:none; overscroll-behavior:none}
+/* ============ 主题切换：纯 CSS 淡入淡出 ============
+   只改 data-theme，颜色由各元素自身的 background/color transition 平滑过渡。
+   不再使用 View Transition 快照层，避免其几何边界在圆形裁剪时产生斜切闪烁。
+   body 已声明 background/color .2s 过渡（见文件上方），其余表面沿用各自 transition。 */
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important; transition-duration:.01ms!important}
 }
@@ -894,6 +877,16 @@ html.theme-switching{touch-action:none; overscroll-behavior:none}
     <div class="card">
       <div class="card__t">主题</div>
       <div class="card__d">右上角按钮切换深浅色；两套主题共用同一布局。</div>
+      <div class="accent-row hidden" id="accentRow">
+        <div>
+          <div class="switch-row__t">自定义主题色</div>
+          <div class="switch-row__d">选择强调色，应用于按钮、进度和选中状态</div>
+        </div>
+        <div class="accent-row__ctl">
+          <input type="color" id="accentPicker" class="accent-picker" value="#355C9A" aria-label="自定义主题色">
+          <button class="accent-reset" id="accentReset" type="button" aria-label="恢复默认主题色">恢复默认</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -1308,6 +1301,12 @@ const I18N_EN = {
     "清除筛选": "Clear filter",
     "主题": "Theme",
     "右上角按钮切换深浅色；两套主题共用同一布局。": "Use the button in the top-right to switch themes; both share the same layout.",
+    "自定义主题色": "Custom accent colour",
+    "选择强调色，应用于按钮、进度和选中状态": "Pick an accent colour for buttons, progress and selection",
+    "恢复默认主题色": "Reset accent colour",
+    "恢复默认": "Reset",
+    "主题色已更新": "Accent colour updated",
+    "已恢复默认主题色": "Accent colour reset to default",
     "动态取色": "Dynamic colour",
     "跟随壁纸生成强调色，背景保持中性": "Accent colour derived from the wallpaper; backgrounds stay neutral",
     "数据": "Data",
@@ -1563,7 +1562,7 @@ function bindLangSeg(){
 /* ---------------- State ---------------- */
 let tasks = [];
 let sessions = [];
-let prefs = { sort:'deadline', group:'none', view:'all', running:'all', theme:'auto', lang:'auto' };
+let prefs = { sort:'deadline', group:'none', view:'all', running:'all', theme:'auto', lang:'auto', accent:null };
 let editingId = null;
 let pendingDeleteId = null;
 let editor = { mode:'duration', priority:'medium', autoStart:true, notify:true, alertAhead:300 };
@@ -1777,7 +1776,6 @@ function requestFullRender(){
 
 function onTick(){
   if (typeof uiPaused !== 'undefined' && uiPaused) return;
-  if (themeSwitching) return;      // 转场中不刷 UI（计时逻辑按时间戳推进，不受影响）
 
   if (syncFromStorage()){ render(); return; }
 
@@ -2081,20 +2079,83 @@ function pushSnack(msg, action, isError){
 }
 const toast = (m, a, e) => pushSnack(m, a, e);
 
-/* ---------------- 主题：资源下发 + 圆形扩散 ----------------
+/* ---------------- 主题：资源下发 + 平滑切换 ----------------
    颜色唯一来源是 res/values/colors.xml 与 res/values-night/colors.xml：
    原生读取两套调色板后下发 window.__onThemeTokens（拉取通道 getThemeTokens）。
    网页只消费 CSS 变量，不硬编码颜色（:root 仅作浏览器离线后备）。
-   切换：View Transition + clip-path 圆形扩散，从按钮中心展开，内容不缩放不位移。 */
+   浏览器切换：只改 data-theme，由 CSS background/color 过渡淡入淡出（稳、无快照层）。
+   Android 切换：仍走原生快照遮罩（AndroidBridge.startThemeSwitch），路径不变。 */
 let NATIVE_TOKENS = null;
-let isSwitching = false;
-let themeSwitching = false;   // 转场进行中：暂停 250ms 心跳的 UI 刷新
-let themeAnim = null;         // 裁剪动画句柄，结束时 cancel，避免残留
-let animScale = 1;
+let isSwitching = false;      // 仅 Android 转场防重入
+let animScale = 1;            // 原生动画缩放（其它 UI 动效用，主题切换已不再依赖）
 
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 const PLAY_ICON  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8.6 5.4v13.2a1 1 0 0 0 1.53.85l10-6.6a1 1 0 0 0 0-1.7l-10-6.6a1 1 0 0 0-1.53.85Z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="7.5" y="6" width="3.4" height="12" rx="1.2"/><rect x="13.1" y="6" width="3.4" height="12" rx="1.2"/></svg>';
+
+/* ---------------- 自定义强调色（仅浏览器） ----------------
+   把用户选择的 hex 派生为一组强调色令牌，覆盖 :root 的后备值。
+   Android 路径（存在 AndroidBridge）整体跳过，主题行为完全不变。 */
+const ACCENT_VARS = ['--primary','--on-primary','--primary-container','--on-primary-container',
+                     '--accent','--on-accent','--accent-strong','--accent-soft','--progress'];
+function hexToRgb(hex){
+  const m = /^#?([\da-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+}
+function relLum(r,g,b){
+  const f = c => { c/=255; return c<=0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); };
+  return 0.2126*f(r) + 0.7152*f(g) + 0.0722*f(b);
+}
+function applyAccent(dark){
+  const root = document.documentElement;
+  const onNative = !!(window.AndroidBridge && typeof window.AndroidBridge === 'object');
+  const rgb = onNative ? null : hexToRgb(prefs.accent);
+  if (!rgb){                                  // 无自定义色 / 原生路径：清掉覆盖，回到主题后备
+    ACCENT_VARS.forEach(k => root.style.removeProperty(k));
+    return;
+  }
+  const { r, g, b } = rgb;
+  const on = relLum(r,g,b) > 0.45 ? '#1A1C1F' : '#FFFFFF';
+  const mix = (tr,tg,tb,w) => 'rgb(' + Math.round(r+(tr-r)*w) + ',' + Math.round(g+(tg-g)*w) + ',' + Math.round(b+(tb-b)*w) + ')';
+  const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  root.style.setProperty('--primary', hex);
+  root.style.setProperty('--accent', hex);
+  root.style.setProperty('--accent-strong', hex);
+  root.style.setProperty('--progress', hex);
+  root.style.setProperty('--on-primary', on);
+  root.style.setProperty('--on-accent', on);
+  root.style.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
+  root.style.setProperty('--primary-container', dark ? mix(0,0,0,.62) : mix(255,255,255,.86));
+  root.style.setProperty('--on-primary-container', dark ? mix(255,255,255,.30) : mix(0,0,0,.28));
+}
+function setAccent(hex, silent){
+  prefs.accent = hexToRgb(hex) ? (hex.charAt(0)==='#'?hex:'#'+hex) : null;
+  savePrefs();
+  applyAccent(isDark());
+  const picker = document.getElementById('accentPicker');
+  if (picker) picker.value = prefs.accent || (isDark() ? '#A9C1F5' : '#355C9A');
+  if (!silent) toast(T(prefs.accent ? '主题色已更新' : '已恢复默认主题色'));
+}
+function bindAccentRow(){
+  const row = document.getElementById('accentRow');
+  if (!row) return;
+  if (window.AndroidBridge && typeof window.AndroidBridge === 'object'){
+    row.classList.add('hidden');              // Android：控件不显示
+    return;
+  }
+  row.classList.remove('hidden');             // 浏览器：显示
+  const picker = document.getElementById('accentPicker');
+  const reset  = document.getElementById('accentReset');
+  if (picker){
+    picker.value = prefs.accent || (isDark() ? '#A9C1F5' : '#355C9A');
+    // 拖动时高频 input：只更新颜色，不弹提示；松手 change 只提示一次
+    picker.addEventListener('input', function(){ setAccent(picker.value, true); });
+    picker.addEventListener('change', function(){ toast(T('主题色已更新')); });
+  }
+  if (reset) reset.addEventListener('click', function(){ setAccent(null); });
+}
 
 function paintTheme(dark){
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -2103,6 +2164,7 @@ function paintTheme(dark){
     const pal = dark ? NATIVE_TOKENS.dark : NATIVE_TOKENS.light;
     for (const k in pal) root.style.setProperty(k, pal[k]);
   }
+  applyAccent(dark);                              // 浏览器自定义强调色（原生路径内部跳过）
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta){
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
@@ -2165,30 +2227,11 @@ function setScrollLocked(lock){
   const sh = $('#appShell'); if (sh) sh.style.overflow = lock ? 'hidden' : '';
 }
 
-/* ---------------- 圆形扩散转场 ----------------
-   原则：点击瞬间完成换色，动画只负责「揭开」。
-   圆心 = 按钮中心的视口坐标；半径 = 四角到圆心的最远距离（每次现算，不缓存）。 */
-
-function reduceMotion(){
-  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-}
-
-/* 结束：移除临时类、补刷一次倒计时。必须幂等（finished / cancel 都会来） */
-function endThemeSwitch(){
-  if (!themeSwitching && !isSwitching) return;
-  themeSwitching = false;
-  isSwitching = false;
-  renderLive();                                   // 过渡仍被禁用，数字一次到位
-  paintStats();
-  document.documentElement.classList.remove('theme-switching');
-  lgAfterTheme();                                  // 主题切换结束：补一次滑块看门狗
-  if (themeAnim){ try { themeAnim.cancel(); } catch(_){} themeAnim = null; }
-  document.documentElement.style.removeProperty('--vt-cx');
-  document.documentElement.style.removeProperty('--vt-cy');
-}
-
+/* ---------------- 主题切换 ----------------
+   浏览器：只改 data-theme，颜色由各元素自身的 background/color transition 平滑过渡。
+   Android：仍走原生快照遮罩，路径与行为保持不变。 */
 function toggleTheme(btn){
-  if (isSwitching) return;                        // 防重入（不改主题状态逻辑）
+  if (isSwitching) return;                        // 防重入（仅 Android 转场期间）
   const next = !isDark();
 
   prefs.theme = next ? 'dark' : 'light';
@@ -2196,7 +2239,7 @@ function toggleTheme(btn){
 
   const B = window.AndroidBridge;
   if (B && typeof B.startThemeSwitch === 'function'){
-    // 原生：快照遮罩 + 反向挖洞，网页只在遮罩下一次性换令牌
+    // 原生：快照遮罩 + 反向挖洞，网页只在遮罩下一次性换令牌（保持不变）
     isSwitching = true;
     try { const n = startNativeSwitch(btn, next); B.startThemeSwitch(n[0], n[1], next); }
     catch(_){ isSwitching = false; paintTheme(next); }
@@ -2204,46 +2247,8 @@ function toggleTheme(btn){
     return;
   }
 
-  // 降级：不支持 View Transition / 系统关闭动画 / 减弱动效 → 直接切，不播动画
-  if (animScale === 0 || typeof document.startViewTransition !== 'function' || reduceMotion()){
-    paintTheme(next);
-    return;
-  }
-
-  const cx = cxPx(btn), cy = cyPx(btn);
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const R = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 2;
-
-  // 动画挂载前先写圆心：新层第一帧就被裁剪，不会闪全屏
-  document.documentElement.style.setProperty('--vt-cx', cx + 'px');
-  document.documentElement.style.setProperty('--vt-cy', cy + 'px');
-
-  isSwitching = true;
-  themeSwitching = true;                          // 暂停心跳刷新与列表动画
-
-  let done = false;
-  const finish = function(){ if (done) return; done = true; endThemeSwitch(); };
-
-  const vt = document.startViewTransition(function(){
-    // 旧层已定格：此刻一次性换色，并冻结所有过渡/动画（新层即最终画面）
-    document.documentElement.classList.add('theme-switching');
-    paintTheme(next);
-  });
-
-  vt.ready.then(function(){
-    const anim = document.documentElement.animate(
-      { clipPath: ['circle(0px at ' + cx + 'px ' + cy + 'px)',
-                   'circle(' + R + 'px at ' + cx + 'px ' + cy + 'px)'] },
-      { duration: 500,
-        easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
-        fill: 'both',
-        pseudoElement: '::view-transition-new(root)' }
-    );
-    themeAnim = anim;
-    anim.finished.then(finish, finish);
-  }, finish).catch(finish);
-
-  vt.finished.then(finish, finish);
+  // 浏览器：一次性写入目标主题，交给 CSS transition 淡入淡出（无快照层、无裁剪）
+  paintTheme(next);
 }
 
 /* 按钮中心（视口坐标，px） */
@@ -4244,9 +4249,11 @@ function paintHints(){
 function boot(){
   initTheme();             // 主题令牌来自 colors.xml / values-night（无桥时用后备色）
   loadPrefs();
+  applyAccent(isDark());   // 载入已保存的自定义强调色（原生路径内部跳过）
   LANG = resolveLang(prefs.lang);   // 'auto' 跟随系统语言（zh* → 中文，其余 → English）
   applyStatic();
   bindLangSeg();
+  bindAccentRow();         // 浏览器显示自定义主题色控件；Android 隐藏
   const __store = loadStore();
   tasks = __store.tasks;
   sessions = __store.sessions;
