@@ -660,6 +660,36 @@ function truthy(label, v){ eq(label, !!v, true); }
   });
   eq('界面无 emoji 字形', emoji, false);
 
+  /* ---------- 31. 宽屏侧栏骨架（≥900px，仅非 APK） ---------- */
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForTimeout(350);
+  // 31a. 1280 下侧栏可见、底部导航隐藏
+  truthy('1280 宽：侧栏可见', await page.locator('#sidebar').isVisible());
+  truthy('1280 宽：底部导航隐藏', !(await page.locator('#nav').isVisible()));
+  truthy('1280 宽：分段控件隐藏', !(await page.locator('#tabs').isVisible()));
+  truthy('1280 宽：desktop-layout 生效',
+    await page.evaluate(() => document.body.classList.contains('desktop-layout')));
+
+  // 31b. 点击侧栏各入口切换页面、当前页高亮正确
+  for (const pg of ['stats', 'schedule', 'me', 'tasks']){
+    await page.click(`#sidebar [data-page="${pg}"]`);
+    await page.waitForTimeout(120);
+    const state = await page.evaluate(() => ({
+      view: [...document.querySelectorAll('.view')].filter(v => !v.classList.contains('hidden')).map(v => v.id),
+      current: [...document.querySelectorAll('#sidebar button[aria-current="page"]')].map(b => b.dataset.page)
+    }));
+    eq(`侧栏 ${pg}：视图唯一切换`, state.view.length === 1 && state.view[0] === 'view' + pg.charAt(0).toUpperCase() + pg.slice(1), true);
+    eq(`侧栏 ${pg}：高亮唯一且正确`, state.current.length === 1 && state.current[0] === pg, true);
+  }
+
+  // 31c. 390 宽：侧栏不可见，底部分段/导航可见（布局与改版前一致）
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(350);
+  truthy('390 宽：侧栏不可见', !(await page.locator('#sidebar').isVisible()));
+  truthy('390 宽：底部导航可见', await page.locator('#nav').isVisible());
+  truthy('390 宽：desktop-layout 未生效',
+    !(await page.evaluate(() => document.body.classList.contains('desktop-layout'))));
+
   await browser.close();
 
   console.log(log.join('\n'));
