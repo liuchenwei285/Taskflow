@@ -804,6 +804,69 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important; transition-duration:.01ms!important}
 }
+
+/* ============ 宽屏骨架：仅 ≥900px 且非 APK（body.desktop-layout）生效 ============
+   两道门控：媒体查询保证窄屏规则不存在；body.desktop-layout 由 JS 在
+   min-width:900px 且无 AndroidBridge 时添加。任一不满足，以下规则全部不生效，
+   窄屏与 APK 保持改版前的底部导航布局。颜色一律走主题令牌，切换主题时同步过渡。 */
+@media(min-width:900px){
+  body.desktop-layout{--sidebar-w:240px}
+
+  /* 左侧栏：实色面板、满高、无磨砂玻璃 */
+  body.desktop-layout .sidebar{
+    position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w); z-index:60;
+    display:flex; flex-direction:column; gap:var(--s2);
+    padding:var(--s5) var(--s3);
+    background:var(--surface); border-right:1px solid var(--outline);
+  }
+  body.desktop-layout .sidebar__brand{
+    display:flex; align-items:center; gap:var(--s3);
+    padding:var(--s2) var(--s3) var(--s5);
+    font-size:17px; font-weight:700; color:var(--on-bg);
+  }
+  body.desktop-layout .sidebar__brand svg{width:28px; height:28px; flex:none}
+  body.desktop-layout .sidebar__item{
+    display:flex; align-items:center; gap:var(--s3);
+    width:100%; min-height:52px; padding:0 var(--s4);
+    border:1px solid transparent; border-radius:var(--r-md);
+    background:transparent; color:var(--on-sv);
+    font-family:inherit; font-size:14px; font-weight:550; text-align:left;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+  }
+  body.desktop-layout .sidebar__item svg{width:22px; height:22px; flex:none}
+  body.desktop-layout .sidebar__item:hover{background:var(--surface-variant)}
+  body.desktop-layout .sidebar__item:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
+  body.desktop-layout .sidebar__item[aria-current="page"]{
+    background:var(--primary-container); color:var(--on-primary-container);
+    border-color:var(--outline); font-weight:650;
+  }
+
+  /* 内容区：让出侧栏宽度，去掉底部避让渐变与 padding，内容限宽居中 */
+  body.desktop-layout .app-shell{
+    left:var(--sidebar-w); right:0;
+    padding:0 var(--s6) var(--s6);
+    -webkit-mask-image:none!important; mask-image:none!important;
+  }
+  body.desktop-layout .app-shell::after{display:none!important}
+  body.desktop-layout .content,
+  body.desktop-layout .view{width:100%; max-width:960px; margin-left:auto; margin-right:auto}
+  body.desktop-layout .content{padding-left:0; padding-right:0}
+
+  /* 宽屏隐藏底部 dock（导航与分段），改用侧栏；DOM 保留供 E2E 与窄屏使用 */
+  body.desktop-layout #nav,
+  body.desktop-layout #tabs{display:none!important}
+
+  /* FAB 保留可见，仅脱离底部 dock 的定位，避免悬在半空 */
+  body.desktop-layout .fab{right:var(--s6); bottom:var(--s6)}
+
+  /* 去磨砂玻璃：宽屏面板一律实色、清晰描边（.pill 虽隐藏也覆盖，防回归） */
+  body.desktop-layout .pill{
+    -webkit-backdrop-filter:none!important; backdrop-filter:none!important;
+    background:var(--surface)!important; border-color:var(--outline)!important;
+    box-shadow:none!important;
+  }
+}
 </style>
 </head>
 <body>
