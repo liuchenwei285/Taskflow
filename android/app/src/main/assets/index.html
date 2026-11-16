@@ -151,9 +151,10 @@ body.is-locked .app-shell{overflow:hidden}
 .brand__logo svg{width:24px; height:24px; transition:width .2s var(--ease), height .2s var(--ease)}
 .brand__text{min-width:0; display:flex; flex-direction:column; gap:var(--s1);
   transition:gap .2s var(--ease)}
-.appbar__title{margin:0; font-size:28px; font-weight:700; letter-spacing:-.4px; line-height:1;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  transition:font-size .2s var(--ease)}
+.appbar__title{margin:0; display:flex; align-items:center; height:28px; min-width:0;
+  white-space:nowrap; overflow:hidden;
+  transition:height .2s var(--ease)}
+.appbar-wordmark{height:26px; width:auto; max-width:100%; color:var(--on-bg)}
 .appbar__sub{font-size:14px; color:var(--on-sv); line-height:1; letter-spacing:.1px;
   max-height:16px; overflow:hidden;
   transition:max-height .2s var(--ease), opacity .16s var(--ease), transform .2s var(--ease)}
@@ -162,7 +163,8 @@ body.is-locked .app-shell{overflow:hidden}
 .appbar.is-collapsed .brand__logo{width:40px; height:40px}
 .appbar.is-collapsed .brand__logo svg{width:20px; height:20px}
 .appbar.is-collapsed .brand__text{gap:0}
-.appbar.is-collapsed .appbar__title{font-size:22px}
+.appbar.is-collapsed .appbar__title{height:22px}
+.appbar.is-collapsed .appbar-wordmark{height:21px}
 .appbar.is-collapsed .appbar__sub{max-height:0; opacity:0; transform:translateY(-4px)}
 
 /* 主题按钮：视觉 40dp 圆，命中区 48dp */
@@ -1104,10 +1106,32 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
 <header class="appbar" id="appbar">
   <div class="appbar__brand">
     <div class="brand__logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 10.5A5.9 5.9 0 1 1 13.5 6.3"/><line x1="12" y1="12" x2="14.3" y2="9.8" stroke-width="1"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
     </div>
     <div class="brand__text">
-      <h1 class="appbar__title">Taskflow</h1>
+      <h1 class="appbar__title" role="img" aria-label="Taskflow">
+        <svg class="appbar-wordmark" viewBox="0 50 1124 270" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
+          <defs><clipPath id="wc3"><rect x="870" y="150" width="250" height="150"/></clipPath></defs>
+          <g fill="currentColor">
+            <rect x="20" y="70" width="130" height="34" rx="8"/><rect x="68" y="70" width="34" height="230" rx="8"/>
+            <rect x="280" y="150" width="34" height="150" rx="8"/>
+            <rect x="452" y="70" width="34" height="230" rx="8"/>
+            <rect x="582" y="160" width="34" height="140" rx="8"/><rect x="566" y="150" width="76" height="32" rx="8"/>
+            <rect x="672" y="70" width="34" height="230" rx="8"/>
+          </g>
+          <g fill="currentColor" stroke="currentColor" stroke-width="5" stroke-linejoin="round">
+            <polygon points="507.5,152.5 542.5,152.5 486,243 486,183"/>
+            <polygon points="522,297.5 559,297.5 507,213 486,240"/>
+          </g>
+          <g fill="none" stroke="currentColor" stroke-linejoin="round">
+            <circle cx="239" cy="225" r="58" stroke-width="34"/>
+            <circle cx="793" cy="225" r="58" stroke-width="34"/>
+            <path stroke-width="33" d="M410 192 C405 175 395 167 382 167 C364 167 353 177 353 191 C353 207 366 213 384 220 C402 227 411 236 411 253 C411 272 399 283 381 283 C364 283 354 275 350 262"/>
+            <path stroke-width="34" d="M599 175 V118 C599 98 612 87 634 87 H648"/>
+            <path stroke-width="34" clip-path="url(#wc3)" d="M894.6 130 L902 150 L950 283 L993.7 165 L1037 283 L1086 150 L1093.4 130"/>
+          </g>
+        </svg>
+      </h1>
       <div class="appbar__sub">倒计时任务管理</div>
     </div>
   </div>
