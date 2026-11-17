@@ -3216,11 +3216,23 @@ function playEmptyIntro(scope){
   setTimeout(function(){ el.classList.remove('empty--in'); }, 700);
 }
 
+/* 入场动画只播给「真正新增」的卡片。
+   已存在的卡片在筛选/排序/分组变化时不再重播入场，否则整列会闪一下。 */
+let renderedIds = new Set();
+function recordRenderedIds(scope){
+  renderedIds = new Set($$('.task', scope || document).map(function(el){ return el.dataset.id; }));
+}
 function staggerIn(scope){
   if (animScale === 0) return;
-  $$('.task', scope || document).forEach(function(el, i){
-    el.style.animationDelay = Math.min(i * 40, 320) + 'ms';
+  const cur = $$('.task', scope || document);
+  let n = 0;
+  cur.forEach(function(el){
+    const id = el.dataset.id;
+    if (id && renderedIds.has(id)) return;   /* 已渲染过：不重播 */
+    if (id) renderedIds.add(id);
+    el.style.animationDelay = Math.min(n * 40, 320) + 'ms';
     el.classList.add('task--in');
+    n++;
   });
 }
 
@@ -3246,7 +3258,12 @@ function render(){
     area.innerHTML = emptyHTML(T('没有符合筛选的任务'), T('当前标签与状态筛选下没有任务，可清除筛选或切换标签。'), true);
     const b = $('#clearFilter');
     if (b) b.onclick = function(){
-      prefs.view = 'all'; prefs.running = 'all'; syncUI(); renderAnimated(); savePrefs();
+      const before = pipeline().arr.map(function(t){ return t.id; }).join(',');
+      prefs.view = 'all'; prefs.running = 'all';
+      const after = pipeline().arr.map(function(t){ return t.id; }).join(',');
+      syncUI();
+      if (before === after) render(); else renderAnimated();
+      savePrefs();
     };
     isEmpty = true;
   } else {
@@ -3263,6 +3280,7 @@ function render(){
     bindTaskEvents();
     if (animateNextRender){ animateNextRender = false; staggerIn(area); }
   }
+  recordRenderedIds(area);
   if (isEmpty && !lastAreaEmpty) playEmptyIntro(area);
   lastAreaEmpty = isEmpty;
 
@@ -3697,10 +3715,15 @@ function paintStats(s){
       };
       b.onclick = function(){
         const k = b.dataset.stat;
+        const before = pipeline().arr.map(function(t){ return t.id; }).join(',');
         if (k === 'overdue'){ prefs.view = 'active'; prefs.running = (prefs.running === 'overdue') ? 'all' : 'overdue'; }
         else if (k === 'running'){ prefs.view = 'active'; prefs.running = (prefs.running === 'running') ? 'all' : 'running'; }
         else { prefs.view = (prefs.view === 'done') ? 'all' : 'done'; prefs.running = 'all'; }
-        syncUI(); renderAnimated(); savePrefs();
+        const after = pipeline().arr.map(function(t){ return t.id; }).join(',');
+        syncUI();
+        /* 可见集合没变就别重播列表入场动画，否则整列会闪一下 */
+        if (before === after) render(); else renderAnimated();
+        savePrefs();
       };
     });
     box.classList.add('is-intro');

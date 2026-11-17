@@ -244,6 +244,16 @@ function truthy(label, v){ eq(label, !!v, true); }
   });
   eq('连续点击只创建一条', dup, 1);
 
+  /* ---------- 7b. 点「计时」小卡片：整列不重播入场动画（避免整列闪光） ---------- */
+  await page.click('.stat[data-stat="running"]');
+  await page.waitForTimeout(70);
+  const noFlash = await page.evaluate(() => Array.from(document.querySelectorAll('.task')).map(t => getComputedStyle(t).opacity));
+  truthy('切到「计时」后整列不再重播入场', noFlash.length > 0 && noFlash.every(o => o === '1'));
+  await page.click('.stat[data-stat="running"]');       // 取消筛选
+  await page.waitForTimeout(70);
+  const noFlash2 = await page.evaluate(() => Array.from(document.querySelectorAll('.task')).map(t => getComputedStyle(t).opacity));
+  truthy('取消「计时」后整列不再重播入场', noFlash2.length > 0 && noFlash2.every(o => o === '1'));
+
   /* ---------- 8. 倒计时逐位滚动 ---------- */
   const pickCard = `(() => {
     const card = Array.from(document.querySelectorAll('.task'))
