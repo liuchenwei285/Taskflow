@@ -54,7 +54,28 @@ d.dataset.theme=(m&&m.matches)?'dark':'light';}catch(_){}})();
   --dock-inset:calc(var(--track) + 4px);   /* 胶囊左右 24dp，卡片 20dp，描边不重合 */
   --ease:cubic-bezier(.2,0,0,1);
   --ease-emph:cubic-bezier(.32,.72,0,1);
-  --fast:.16s; --norm:.24s;
+  --fast:var(--dur-tip); --norm:var(--dur-soft);
+
+  /* ---- 动效令牌：全站唯一的时长/曲线/位移来源 ----
+     组件内不得再写散落时长；新增动效一律引用此处。 */
+  --dur-hover:120ms;      /* hover 反馈 */
+  --dur-press:100ms;      /* 按下/松开 */
+  --dur-tip:150ms;        /* 小提示、图标与勾选态 */
+  --dur-modal:220ms;      /* 弹窗开合 */
+  --dur-page:220ms;       /* 页面切换 */
+  --dur-card:300ms;       /* 卡片入场 */
+  --dur-sidebar:240ms;    /* 侧边栏折叠 */
+  --dur-empty:600ms;      /* 空状态总时长 */
+  --dur-empty-item:200ms; /* 空状态单个元素入场（400ms 延迟 + 200ms = 600ms 总时长） */
+  --dur-roll:260ms;       /* 倒计时数字纵向滚动 */
+  --dur-alert:800ms;       /* 卡片到期告警脉冲（一次，不循环） */
+  --dur-soft:200ms;       /* 表面色/背景类过渡 */
+  --ease-out:cubic-bezier(0,0,.2,1);      /* 进入 */
+  --ease-in:cubic-bezier(.4,0,1,1);       /* 退出 */
+  --ease-inout:cubic-bezier(.4,0,.2,1);   /* 状态切换 */
+  --move-page:6px;        /* 页面切换位移 */
+  --move-card:2px;        /* 卡片上浮 */
+  --move-empty:10px;      /* 空状态图标上移 */
   /* 品牌字：圆润几何粗体，沿用系统字体栈（单文件、无外部依赖） */
   --font-brand:"Arial Rounded MT Bold","Arial Rounded",sans-serif;
 }
@@ -95,7 +116,7 @@ body{
   font-size:14px; line-height:1.5;
   -webkit-font-smoothing:antialiased;
   height:100vh; height:100dvh; overflow:hidden;   /* UI16：滚动交给 .app-shell */
-  transition:background .2s var(--ease), color .2s var(--ease);
+  transition:background var(--dur-soft) var(--ease-out), color var(--dur-soft) var(--ease-out);
 }
 body.no-seg{--bar:72px}   /* 无分段：8 + 64 */
 body.is-locked{overflow:hidden; touch-action:none}
@@ -131,14 +152,14 @@ body.is-locked .app-shell{overflow:hidden}
   min-height:56px; padding:var(--s1) var(--track);
   display:flex; align-items:center; gap:var(--s2);
   background:var(--bg);
-  transition:min-height .2s var(--ease), background .2s var(--ease);
+  transition:min-height var(--dur-soft) var(--ease-out), background var(--dur-soft) var(--ease-out);
 }
 .appbar::after{content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
-  background:transparent; transition:background .2s var(--ease)}
+  background:transparent; transition:background var(--dur-soft) var(--ease-out)}
 /* 折叠态：标题栏下方 12dp 渐变托底，内容淡出而非被硬切 */
 .appbar::before{content:''; position:absolute; left:0; right:0; top:100%; height:var(--s3);
   background:linear-gradient(to bottom, var(--surface), rgba(0,0,0,0));
-  opacity:0; transition:opacity .2s var(--ease); pointer-events:none}
+  opacity:0; transition:opacity var(--dur-soft) var(--ease-out); pointer-events:none}
 .appbar.is-collapsed::before{opacity:1}
 .appbar.scrolled::after,.appbar.is-collapsed::after{background:var(--outline)}
 .appbar__brand{flex:1; min-width:0; display:flex; align-items:center; gap:var(--s3)}
@@ -146,18 +167,18 @@ body.is-locked .app-shell{overflow:hidden}
   flex:none; width:48px; height:48px; border-radius:var(--r-md);
   background:var(--surface-variant); color:var(--on-bg);
   display:grid; place-items:center; padding:0;
-  transition:width .2s var(--ease), height .2s var(--ease);
+  transition:width var(--dur-soft) var(--ease-out), height var(--dur-soft) var(--ease-out);
 }
-.brand__logo svg{width:24px; height:24px; transition:width .2s var(--ease), height .2s var(--ease)}
+.brand__logo svg{width:24px; height:24px; transition:width var(--dur-soft) var(--ease-out), height var(--dur-soft) var(--ease-out)}
 .brand__text{min-width:0; display:flex; flex-direction:column; gap:var(--s1);
-  transition:gap .2s var(--ease)}
+  transition:gap var(--dur-soft) var(--ease-out)}
 .appbar__title{margin:0; display:flex; align-items:center; height:28px; min-width:0;
   white-space:nowrap; overflow:hidden;
-  transition:height .2s var(--ease)}
+  transition:height var(--dur-soft) var(--ease-out)}
 .appbar-wordmark{height:26px; width:auto; max-width:100%; color:var(--on-bg)}
 .appbar__sub{font-size:14px; color:var(--on-sv); line-height:1; letter-spacing:.1px;
   max-height:16px; overflow:hidden;
-  transition:max-height .2s var(--ease), opacity .16s var(--ease), transform .2s var(--ease)}
+  transition:max-height var(--dur-soft) var(--ease-out), opacity var(--dur-tip) var(--ease-out), transform var(--dur-soft) var(--ease-out)}
 /* 折叠态：滚动 > 8dp */
 .appbar.is-collapsed{min-height:56px; background:var(--surface)}
 .appbar.is-collapsed .brand__logo{width:40px; height:40px}
@@ -179,10 +200,10 @@ body.is-locked .app-shell{overflow:hidden}
   background:var(--surface-variant); border:1px solid var(--outline);
   display:grid; place-items:center;
   transform:rotate(0deg);
-  transition:transform .5s var(--ease-emph), background .2s var(--ease);
+  transition:transform var(--dur-modal) var(--ease-out), background var(--dur-soft) var(--ease-out);
 }
 :root[data-theme="dark"] .theme-btn__icons{transform:rotate(90deg)}
-.theme-btn svg{position:absolute; width:20px; height:20px; transition:opacity .3s var(--ease), transform .5s var(--ease-emph)}
+.theme-btn svg{position:absolute; width:20px; height:20px; transition:opacity var(--dur-modal) var(--ease-out), transform var(--dur-modal) var(--ease-out)}
 .ico-sun{opacity:1; transform:rotate(0deg)}
 .ico-moon{opacity:0; transform:rotate(-90deg)}
 :root[data-theme="dark"] .ico-sun{opacity:0; transform:rotate(90deg)}
@@ -209,13 +230,23 @@ body.is-locked .app-shell{overflow:hidden}
   background:var(--surface-variant); border:none; border-radius:var(--r-lg);
   padding:var(--s4); text-align:left; font-family:inherit; color:var(--on-bg);
   cursor:pointer; min-width:0;
+  box-shadow:inset 0 0 0 1px transparent;
+  transition:transform var(--dur-hover) var(--ease-out),
+             box-shadow var(--dur-hover) var(--ease-out),
+             background-color var(--dur-hover) var(--ease-out),
+             opacity var(--dur-hover) var(--ease-out);
 }
-.stat:active{filter:brightness(.97)}
+.stat:hover{transform:translateY(calc(-1 * var(--move-card))); box-shadow:inset 0 0 0 1px var(--outline-strong)}
+.stat:active{transform:translateY(calc(-1 * var(--move-card))) scale(.98)}
 .stat__num{display:flex; align-items:baseline; gap:2px;
   font-size:28px; font-weight:650; letter-spacing:-.6px; line-height:1;
   font-variant-numeric:tabular-nums; color:var(--on-bg)}
+.stat__num.is-bump{animation:numBump var(--dur-soft) var(--ease-out)}
+@keyframes numBump{from{opacity:.3; transform:translateY(-3px)} to{opacity:1; transform:none}}
 .stat__sub{display:none}
 .stat__icon{display:none}                 /* 仅宽屏显示图标 */
+.stat__icon{transition:transform var(--dur-hover) var(--ease-out)}
+.stat:hover .stat__icon{transform:scale(1.06)}
 .stat__text{display:flex; flex-direction:column; gap:var(--s1); min-width:0}
 .stat__label{font-size:12px; color:var(--on-sv); letter-spacing:.2px; white-space:nowrap}
 .stat--alert{background:var(--error-container); color:var(--on-error-container)}
@@ -251,7 +282,7 @@ body.is-locked .app-shell{overflow:hidden}
   box-shadow:0 8px 28px rgba(0,0,0,.12); padding:var(--s2) 0;
   opacity:0; transform:scale(.97) translateY(-4px); transform-origin:top left;
   pointer-events:none;
-  transition:opacity var(--fast) var(--ease), transform var(--fast) var(--ease-emph);
+  transition:opacity var(--dur-tip) var(--ease-out), transform var(--dur-press) var(--ease-out);
 }
 .menu.open{opacity:1; transform:none; pointer-events:auto}
 .menu__head{padding:var(--s2) var(--s4) var(--s1); font-size:11px; font-weight:600;
@@ -274,7 +305,7 @@ body.is-locked .app-shell{overflow:hidden}
   background:var(--surface); border:1px solid var(--outline); border-radius:var(--r-md);
   box-shadow:0 10px 32px rgba(0,0,0,.14); padding:var(--s2) 0;
   opacity:0; transform:scale(.97); transform-origin:top right; pointer-events:none;
-  transition:opacity var(--fast) var(--ease), transform var(--fast) var(--ease-emph);
+  transition:opacity var(--dur-tip) var(--ease-out), transform var(--dur-press) var(--ease-out);
 }
 .pop.open{opacity:1; transform:none; pointer-events:auto}
 .pop button{display:flex; align-items:center; gap:var(--s3); width:100%; min-height:48px;
@@ -292,10 +323,10 @@ body.is-locked .app-shell{overflow:hidden}
   background:var(--surface); border:1px solid var(--outline);
   border-radius:var(--r-lg); padding:var(--s4);
   display:flex; flex-direction:column; gap:var(--s3);
-  transition:background var(--norm) var(--ease), border-color var(--norm) var(--ease),
-             opacity var(--norm) var(--ease);
+  transition:background var(--dur-soft) var(--ease-out), border-color var(--dur-soft) var(--ease-out),
+             opacity var(--dur-soft) var(--ease-out);
 }
-.task--in{animation:cardIn .32s var(--ease) both}
+.task--in{animation:cardIn var(--dur-card) var(--ease-out) both}
 @keyframes cardIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
 .task:active{background:var(--surface-variant)}
 .task.is-done{opacity:.6}
@@ -303,7 +334,7 @@ body.is-locked .app-shell{overflow:hidden}
 .task.is-done .cd{opacity:.6}
 .task.is-done .play{display:none}
 .task.st-over{border-color:var(--danger)}
-.task.is-alert{animation:pulseAlert .8s var(--ease) 1}
+.task.is-alert{animation:pulseAlert var(--dur-alert) var(--ease-out) 1}
 @keyframes pulseAlert{0%{background:var(--danger-soft)} 100%{background:var(--surface)}}
 
 .task__head{display:flex; align-items:center; gap:var(--s3)}
@@ -314,17 +345,17 @@ body.is-locked .app-shell{overflow:hidden}
 }
 .check::after{
   content:''; position:absolute; inset:0; border-radius:var(--r-full);
-  background:transparent; transition:background 120ms var(--ease);
+  background:transparent; transition:background var(--dur-hover) var(--ease-out);
 }
 .check:active::after{background:var(--surface-variant)}
 .check__box{
   width:24px; height:24px; border-radius:var(--r-full);
   border:2px solid var(--outline-strong); background:transparent;
   display:grid; place-items:center;
-  transition:background 150ms var(--ease), border-color 150ms var(--ease), transform 150ms var(--ease);
+  transition:background var(--dur-tip) var(--ease-out), border-color var(--dur-tip) var(--ease-out), transform var(--dur-tip) var(--ease-out);
 }
 .check:active .check__box{transform:scale(.9)}
-.check__box svg{position:relative; z-index:1; opacity:0; transform:scale(.6); transition:opacity 150ms var(--ease), transform 150ms var(--ease-emph)}
+.check__box svg{position:relative; z-index:1; opacity:0; transform:scale(.6); transition:opacity var(--dur-tip) var(--ease-out), transform var(--dur-tip) var(--ease-out)}
 .check[aria-checked="true"] .check__box{background:var(--primary); border-color:var(--primary)}
 .check[aria-checked="true"] .check__box svg{opacity:1; transform:none; color:var(--on-primary)}
 .task__title{
@@ -364,9 +395,10 @@ body.is-locked .app-shell{overflow:hidden}
   box-shadow:inset 0 0 0 1px transparent;
 }
 .mini-progress > i{
-  display:block; height:100%; min-width:8px; border-radius:4px;
-  background:var(--progress); box-shadow:0 0 0 1px var(--progress);
-  transition:width .4s linear;
+  display:block; height:100%; width:100%; border-radius:4px;
+  background:var(--progress);
+  transform-origin:left center; transform:scaleX(0);
+  transition:transform var(--dur-soft) linear;
 }
 .task.st-paused .mini-progress > i{opacity:.6}
 .mini-progress.is-over > i{background:var(--danger); box-shadow:0 0 0 1px var(--danger); opacity:1}
@@ -381,7 +413,7 @@ body.is-locked .app-shell{overflow:hidden}
   width:40px; height:40px; border-radius:var(--r-full);
   background:var(--primary); color:var(--on-primary);
   display:grid; place-items:center;
-  transition:transform var(--fast) var(--ease);
+  transition:transform var(--dur-tip) var(--ease-out);
 }
 .play:active .play__circle{transform:scale(.92); box-shadow:0 0 0 8px var(--accent-soft)}
 .play:disabled{opacity:.35; cursor:not-allowed}
@@ -418,22 +450,64 @@ body.is-locked .app-shell{overflow:hidden}
 .empty p{margin:0; font-size:12.5px; line-height:1.6; max-width:280px}
 .empty .btn{margin-top:var(--s2)}
 
+/* ============ 微交互动效：入场序列 ============ */
+/* 统计卡首次挂载淡入（只播一次，backwards 不锁 transform，hover 上浮不受影响） */
+.stats.is-intro .stat{animation:statIn var(--dur-card) var(--ease-out) backwards}
+.stats.is-intro .stat:nth-child(2){animation-delay:60ms}
+.stats.is-intro .stat:nth-child(3){animation-delay:120ms}
+@keyframes statIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+/* 空状态：图标 → 标题 → 描述 → 按钮，400ms 错峰 + 200ms 入场 = 600ms 总时长 */
+.empty--in > *{animation:emptyIn var(--dur-empty-item) var(--ease-out) backwards}
+.empty--in > *:nth-child(1){animation-delay:0ms}
+.empty--in > *:nth-child(2){animation-delay:150ms}
+.empty--in > *:nth-child(3){animation-delay:280ms}
+.empty--in > *:nth-child(4){animation-delay:400ms}
+@keyframes emptyIn{from{opacity:0; transform:translateY(var(--move-empty))} to{opacity:1; transform:none}}
+/* 图标只沉降一次，不循环、不回弹 */
+.empty--in .empty__icon svg{animation:emptyIcon var(--dur-empty) var(--ease-out) 1 both}
+@keyframes emptyIcon{from{transform:scale(.9)} to{transform:scale(1)}}
+
+/* 页面切换：淡入 + 位移，仅在路由真正变化时加类触发 */
+.view--in{animation:viewIn var(--dur-page) var(--ease-out)}
+@keyframes viewIn{from{opacity:0; transform:translateY(var(--move-page))} to{opacity:1; transform:none}}
+
+/* ============ 倒计时：按位数字 ============ */
+/* 视觉层按位包裹，读屏层给完整文本，避免读到滚动中的中间状态 */
+.cd__time{position:relative}
+.cd__in{display:inline; white-space:nowrap}
+.cd__dig{display:inline-block; font-variant-numeric:tabular-nums}
+.cd__dig.is-roll{animation:cdRoll var(--dur-roll) var(--ease-out); will-change:transform}
+@keyframes cdRoll{from{opacity:0; transform:translateY(-60%)} to{opacity:1; transform:none}}
+.cd__sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0}
+
 /* ---------------- 按钮 ---------------- */
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
   height:48px; padding:0 var(--s5); border-radius:var(--r-full); border:none;
   font-family:inherit; font-size:14px; font-weight:650; letter-spacing:.1px;
   cursor:pointer;
+  transition:transform var(--dur-press) var(--ease-out),
+             background-color var(--dur-hover) var(--ease-out),
+             border-color var(--dur-hover) var(--ease-out),
+             box-shadow var(--dur-hover) var(--ease-out),
+             opacity var(--dur-hover) var(--ease-out);
 }
 .btn:active{transform:scale(.97)}
 .btn svg{width:18px; height:18px}
 .btn--primary{background:var(--primary); color:var(--on-primary)}
+.btn--primary:hover{box-shadow:0 4px 14px rgba(0,0,0,.16)}
 .btn--tonal{background:var(--surface-variant); color:var(--on-bg); border:1px solid var(--outline)}
+.btn--tonal:hover{background:var(--surface)}
 .btn--text{background:none; color:var(--on-bg); padding:0 var(--s4)}
 .btn--outline{background:transparent; color:var(--on-bg); border:1px solid var(--on-sv)}
 .btn--danger{background:var(--danger); color:#fff}
 .btn--errtext{background:none; color:var(--danger); padding:0 var(--s4)}
 .btn[disabled]{opacity:.4; pointer-events:none}
+
+/* 提交中：仅表现层反馈，提交逻辑本身不变 */
+.btn.is-busy{pointer-events:none; opacity:.72}
 
 /* ---------------- 悬浮新建：右缘落在轨道上 ---------------- */
 .fab{
@@ -445,8 +519,12 @@ body.is-locked .app-shell{overflow:hidden}
   box-shadow:0 6px 20px rgba(0,0,0,.16);
   display:inline-flex; align-items:center; justify-content:center;
   font-family:inherit; font-size:14px; font-weight:650;
+  transition:transform var(--dur-press) var(--ease-out),
+             box-shadow var(--dur-hover) var(--ease-out),
+             background-color var(--dur-hover) var(--ease-out);
 }
-.fab:active{transform:scale(.95)}
+.fab:hover{box-shadow:0 8px 26px rgba(0,0,0,.22)}
+.fab:active{transform:scale(.97)}
 .fab svg{width:24px; height:24px}
 body.no-fab .fab{display:none}
 
@@ -495,7 +573,7 @@ body.no-fab .fab{display:none}
   touch-action:pan-y;
   cursor:grab;
   opacity:1;
-  transition:box-shadow .15s var(--ease);
+  transition:box-shadow var(--dur-tip) var(--ease-out);
 }
 .seg__ind.is-press{
   cursor:grabbing;
@@ -508,7 +586,7 @@ body.no-fab .fab{display:none}
   cursor:pointer; border-radius:26px;
   pointer-events:none;             /* UI15：按钮只作展示/键盘焦点，命中交给轨道委托 */
   touch-action:pan-y;
-  transition:color .18s var(--ease), font-size .18s var(--ease);
+  transition:color var(--dur-tip) var(--ease-inout);
 }
 .seg button[aria-checked="true"],.seg button[aria-selected="true"]{
   color:var(--lg-on); font-weight:600; font-size:13.65px;
@@ -528,14 +606,15 @@ body.no-seg .seg{display:none}
   gap:var(--s1); min-height:48px;
   border:none; background:none; cursor:pointer; font-family:inherit;
   color:var(--lg-on-dim); padding:0;
-  transition:color .18s var(--ease);
+  transition:color var(--dur-tip) var(--ease-inout);
 }
 .nav button[aria-current="page"]{color:var(--primary)}
 .nav button[aria-current="page"] span{font-weight:600}
 .nav svg{width:24px; height:24px}
 .nav span{font-size:10.5px; line-height:1.1; letter-spacing:0; font-weight:500; white-space:nowrap}
-.nav button.is-pop svg{animation:navPop .15s var(--ease-emph)}
-@keyframes navPop{0%{transform:scale(1)} 45%{transform:scale(1.08)} 100%{transform:scale(1)}}
+/* 轻点反馈：按下收缩再复位，单次、不回弹、不循环 */
+.nav button.is-pop svg{animation:navPress var(--dur-tip) var(--ease-out)}
+@keyframes navPress{from{transform:scale(.88)} to{transform:scale(1)}}
 
 /* 降级：不支持 backdrop-filter / prefers-reduced-transparency / 省电 / 帧耗时终级降档
    → 不透明纯色，保留圆角、1px 边、阴影 */
@@ -568,7 +647,7 @@ body.perf-lite .pill{
   border:1px solid var(--on-sv); border-radius:var(--r-md);
   background:var(--surface); color:var(--on-sv);
   font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
-  white-space:nowrap; transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+  white-space:nowrap; transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out);
 }
 .seg-line button[aria-pressed="true"]{
   background:var(--primary); border-color:var(--primary); color:var(--on-primary);
@@ -584,18 +663,20 @@ body.perf-lite .pill{
   padding:calc(var(--s6) + env(safe-area-inset-top, 0px)) var(--track)
           calc(var(--s6) + env(safe-area-inset-bottom, 0px));
   background:var(--scrim);
-  opacity:0; pointer-events:none; transition:opacity .2s var(--ease);
+  opacity:0; pointer-events:none; transition:opacity var(--dur-modal) var(--ease-out);
 }
 .scrim.open{opacity:1; pointer-events:auto}
+.scrim.is-closing{opacity:0; pointer-events:none}
 .dialog{
   display:flex; flex-direction:column; width:100%; max-width:560px; max-height:100%;
   background:var(--surface); border:1px solid var(--outline); border-radius:var(--r-xl);
   box-shadow:0 16px 48px rgba(0,0,0,.18);
   transform:scale(.96) translateY(8px); opacity:0;
-  transition:transform .26s var(--ease-emph), opacity .2s var(--ease);
+  transition:transform var(--dur-modal) var(--ease-out), opacity var(--dur-modal) var(--ease-out);
   overflow:hidden;
 }
 .scrim.open .dialog{transform:none; opacity:1}
+.scrim.is-closing .dialog{transform:scale(.97) translateY(6px); opacity:0}
 .dialog__head{flex:none; padding:var(--s6) var(--s6) 0}
 .dialog__title{margin:0; font-size:19px; font-weight:650; letter-spacing:-.2px; line-height:1.3}
 .dialog__sub{margin:var(--s2) 0 0; font-size:12.5px; color:var(--on-sv); line-height:1.5}
@@ -618,7 +699,7 @@ body.perf-lite .pill{
   width:100%; font-family:inherit; font-size:15px; color:var(--on-bg);
   background:var(--surface-variant); border:1px solid transparent; border-radius:var(--r-md);
   padding:22px var(--s4) var(--s2); outline:none;
-  transition:border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+  transition:border-color var(--dur-tip) var(--ease-out), background var(--dur-tip) var(--ease-out);
 }
 .field textarea{resize:vertical; min-height:88px; line-height:1.5}
 .field select{appearance:none; cursor:pointer; padding-right:40px}
@@ -628,7 +709,7 @@ body.perf-lite .pill{
 .field label{
   position:absolute; left:var(--s4); top:16px; font-size:15px; color:var(--on-sv);
   pointer-events:none; transform-origin:left top;
-  transition:transform var(--fast) var(--ease-emph), color var(--fast) var(--ease);
+  transition:transform var(--dur-press) var(--ease-out), color var(--dur-tip) var(--ease-out);
 }
 .field input:focus + label, .field textarea:focus + label,
 .field input:not(:placeholder-shown) + label,
@@ -664,11 +745,11 @@ body.perf-lite .pill{
 .switch::after{content:''; position:absolute; inset:-8px 0}
 .switch__track{position:absolute; inset:0; border-radius:var(--r-full);
   background:var(--surface-variant); border:1px solid var(--on-sv);
-  transition:background var(--fast) var(--ease)}
+  transition:background var(--dur-tip) var(--ease-out)}
 .switch__thumb{position:absolute; top:50%; left:6px; width:16px; height:16px; border-radius:var(--r-full);
   background:var(--on-sv); transform:translateY(-50%);
-  transition:left var(--fast) var(--ease-emph), width var(--fast) var(--ease-emph),
-             height var(--fast) var(--ease-emph), background var(--fast) var(--ease)}
+  transition:left var(--dur-press) var(--ease-out), width var(--dur-press) var(--ease-out),
+             height var(--dur-press) var(--ease-out), background var(--dur-tip) var(--ease-out)}
 .switch[aria-checked="true"] .switch__track{background:var(--primary); border-color:var(--primary)}
 .switch[aria-checked="true"] .switch__thumb{left:calc(100% - 26px); width:24px; height:24px; background:var(--on-primary)}
 
@@ -693,12 +774,12 @@ body.perf-lite .pill{
   border-radius:var(--r-full); background:var(--surface-variant); border:none}
 .mini-seg__ind{position:absolute; top:var(--s1); left:0; height:32px; border-radius:var(--r-full);
   background:var(--primary); z-index:0; pointer-events:none;
-  transition:transform .26s var(--ease), width .26s var(--ease)}
+  transition:transform var(--dur-sidebar) var(--ease-inout), width var(--dur-sidebar) var(--ease-inout)}
 .mini-seg button{
   position:relative; z-index:1;
   height:32px; padding:0 var(--s3); border:none; background:none; border-radius:var(--r-full);
   font-family:inherit; font-size:12px; font-weight:500; color:var(--on-sv);
-  cursor:pointer; transition:color .2s var(--ease);
+  cursor:pointer; transition:color var(--dur-soft) var(--ease-out);
 }
 .mini-seg button[aria-pressed="true"]{color:var(--on-primary); font-weight:600}
 .chart__hint{font-size:12px; color:var(--on-sv); white-space:nowrap}
@@ -714,7 +795,7 @@ body.perf-lite .pill{
 .chart__val--today{color:var(--on-bg); font-weight:600}
 .chart__bar{width:100%; height:0; border-radius:var(--s1) var(--s1) 0 0;
   background:var(--primary); opacity:.4;
-  transition:height .3s var(--ease-emph), opacity .2s var(--ease)}
+  transition:height var(--dur-soft) var(--ease-out), opacity var(--dur-soft) var(--ease-out)}
 .chart__bar--today{opacity:1}
 .chart__bar--zero{background:var(--outline); opacity:1; border-radius:0}
 .chart__x{display:grid; grid-template-columns:repeat(7,1fr); gap:var(--s2)}
@@ -750,7 +831,7 @@ body.perf-lite .pill{
 .lang-seg button{appearance:none; border:0; background:transparent; color:var(--on-sv);
   font:inherit; font-size:13.5px; font-weight:550; min-height:38px; border-radius:var(--r-full);
   cursor:pointer; -webkit-tap-highlight-color:transparent;
-  transition:background var(--fast) var(--ease), color var(--fast) var(--ease)}
+  transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out)}
 .lang-seg button[aria-pressed="true"]{background:var(--surface); color:var(--on-bg); font-weight:650;
   box-shadow:0 1px 3px rgba(15,23,42,.10)}
 html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3px rgba(0,0,0,.38)}
@@ -766,7 +847,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
 .accent-reset{appearance:none; border:1px solid var(--outline); background:var(--surface);
   color:var(--on-sv); font:inherit; font-size:12px; min-height:36px; padding:0 var(--s3);
   border-radius:var(--r-sm); cursor:pointer; -webkit-tap-highlight-color:transparent;
-  transition:background var(--fast) var(--ease), color var(--fast) var(--ease)}
+  transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out)}
 .progress--lg{height:8px; border-radius:4px; background:var(--progress-track); overflow:hidden}
 .progress--lg > i{display:block; width:0; height:100%; background:var(--primary); border-radius:4px}
 .progress--lg > i.is-on{min-width:8px}
@@ -787,15 +868,20 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
   display:flex; flex-direction:column; gap:var(--s2); align-items:center;
   width:min(520px, calc(100vw - 2 * var(--track))); pointer-events:none;
 }
-.snack{pointer-events:auto; width:100%; background:var(--on-bg); color:var(--bg);
+/* 窄屏下 FAB 与提示条同高会互相遮挡，提示条上移让出 FAB 的位置 */
+body:not(.desktop-layout) .snackbar-wrap{
+  bottom:calc(var(--bar) + var(--s4) + var(--fab-h) + var(--s2) + env(safe-area-inset-bottom, 0px));
+}
+/* 提示条本体不接收指针事件：否则会把 FAB 的点击吞掉（mousedown 落在 FAB，mouseup 落在提示条 → click 丢失） */
+.snack{pointer-events:none; width:100%; background:var(--on-bg); color:var(--bg);
   border-radius:var(--r-md); padding:var(--s3) var(--s4);
   display:flex; align-items:center; gap:var(--s3); font-size:13px;
-  box-shadow:0 8px 24px rgba(0,0,0,.18); animation:snackIn .26s var(--ease-emph) both}
+  box-shadow:0 8px 24px rgba(0,0,0,.18); animation:snackIn var(--dur-modal) var(--ease-out) both}
 @keyframes snackIn{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
-.snack.out{animation:snackOut .2s var(--ease) both}
+.snack.out{animation:snackOut var(--dur-soft) var(--ease-in) both}
 @keyframes snackOut{to{opacity:0; transform:translateY(10px)}}
 .snack__msg{flex:1; min-width:0}
-.snack__act{background:none; border:none; cursor:pointer; font-family:inherit;
+.snack__act{pointer-events:auto; background:none; border:none; cursor:pointer; font-family:inherit;
   font-size:13px; font-weight:650; color:var(--accent); padding:var(--s1) var(--s2); border-radius:var(--r-sm)}
 .snack--alert{background:var(--danger); color:#fff}
 .snack--alert .snack__act{color:#fff}
@@ -807,7 +893,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
   background:var(--surface); border:1px solid var(--danger); border-radius:var(--r-lg);
   box-shadow:0 12px 32px rgba(0,0,0,.18); padding:var(--s4);
   display:flex; gap:var(--s3); align-items:flex-start;
-  transition:transform .36s var(--ease-emph);
+  transition:transform var(--dur-modal) var(--ease-out);
 }
 .alert-banner.show{transform:translateX(-50%) translateY(0)}
 .alert-banner__i{flex:none; width:40px; height:40px; border-radius:var(--r-full);
@@ -821,7 +907,22 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
    不再使用 View Transition 快照层，避免其几何边界在圆形裁剪时产生斜切闪烁。
    body 已声明 background/color .2s 过渡（见文件上方），其余表面沿用各自 transition。 */
 @media(prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms!important; transition-duration:.01ms!important}
+  *,*::before,*::after{
+    animation-duration:.01ms!important; animation-iteration-count:1!important;
+    transition-duration:.01ms!important; transition-delay:0ms!important;
+    scroll-behavior:auto!important;
+  }
+  /* 位移/缩放/滚动一律取消，元素回到自然状态，功能与信息不受影响 */
+  .task--in,.empty--in>*,.stats.is-intro .stat,.view--in,
+  .stat__num.is-bump,.cd__dig.is-roll,.empty__icon svg{animation:none!important}
+  .cd__dig.is-roll{opacity:1!important; transform:none!important}
+}
+
+/* ---------------- 全局焦点可见性（键盘可达，不依赖动画） ---------------- */
+:where(.btn,.fab,.page-add,.type-opt,.seg button,.nav button,.check,.more,.play,
+       .stat,.menu__item,.pop button,.sort-btn,.search-clear,.sidebar__item,
+       .sidebar__collapse,.sidebar__side-btn,.chip,.ddl-opt,.type-opt):focus-visible{
+  outline:2px solid var(--primary); outline-offset:2px;
 }
 
 /* ============ 宽屏骨架：仅 ≥900px 且非 APK（body.desktop-layout）生效 ============
@@ -836,7 +937,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w); z-index:60;
     display:flex; flex-direction:column; gap:var(--s2);
     padding:calc(var(--s6) + var(--s2)) var(--s3) var(--s5);
-    transition:width .28s var(--ease), padding .28s var(--ease);
+    transition:width var(--dur-sidebar) var(--ease-inout), padding var(--dur-sidebar) var(--ease-inout);
     background:var(--surface); border-right:1px solid var(--outline);
   }
   body.desktop-layout .sidebar__brand{
@@ -852,7 +953,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     background:transparent; color:var(--on-sv);
     font-family:inherit; font-size:14px; font-weight:550; text-align:left;
     cursor:pointer; -webkit-tap-highlight-color:transparent;
-    transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+    transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out);
   }
   body.desktop-layout .sidebar__item svg{width:22px; height:22px; flex:none}
   body.desktop-layout .sidebar__item:hover{background:var(--surface-variant)}
@@ -867,7 +968,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     left:var(--sidebar-w); right:0;
     padding:0 var(--s6) var(--s6);
     -webkit-mask-image:none!important; mask-image:none!important;
-    transition:left .28s var(--ease);
+    transition:left var(--dur-sidebar) var(--ease-inout);
   }
   body.desktop-layout .app-shell::after{display:none!important}
   body.desktop-layout .content,
@@ -904,7 +1005,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     display:flex; align-items:center; gap:var(--s2); width:220px; height:40px;
     padding:0 var(--s3); border:1px solid var(--outline); border-radius:var(--r-full);
     background:var(--surface); color:var(--on-sv);
-    transition:border-color var(--fast) var(--ease);
+    transition:border-color var(--dur-tip) var(--ease-out);
   }
   body.desktop-layout .search-box:focus-within{border-color:var(--primary)}
   body.desktop-layout .search-box svg{width:18px; height:18px; flex:none}
@@ -923,7 +1024,11 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     border:0; border-radius:var(--r-full); background:var(--primary); color:var(--on-primary);
     font-family:inherit; font-size:13px; font-weight:650; cursor:pointer;
     -webkit-tap-highlight-color:transparent;
+    transition:transform var(--dur-press) var(--ease-out),
+               box-shadow var(--dur-hover) var(--ease-out);
   }
+  body.desktop-layout .page-add:hover{box-shadow:0 4px 14px rgba(0,0,0,.16)}
+  body.desktop-layout .page-add:active{transform:scale(.97)}
   body.desktop-layout .page-add svg{width:18px; height:18px}
   body.desktop-layout .fab{display:none!important}   /* 宽屏改用标题行新建，隐藏右下 FAB */
 
@@ -967,7 +1072,7 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     display:grid; place-items:center; flex:none; width:36px; height:36px;
     border:1px solid transparent; border-radius:var(--r-sm); background:transparent;
     color:var(--on-sv); cursor:pointer; -webkit-tap-highlight-color:transparent;
-    transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+    transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out);
   }
   body.desktop-layout .sidebar__collapse:hover{background:var(--surface-variant); color:var(--on-bg)}
   body.desktop-layout .sidebar__collapse:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
@@ -989,14 +1094,14 @@ html[data-theme="dark"] .lang-seg button[aria-pressed="true"]{box-shadow:0 1px 3
     width:36px; height:36px; border:1px solid var(--outline); border-radius:var(--r-full);
     background:transparent; color:var(--on-sv); cursor:pointer;
     -webkit-tap-highlight-color:transparent;
-    transition:background var(--fast) var(--ease), color var(--fast) var(--ease), border-color var(--fast) var(--ease);
+    transition:background var(--dur-tip) var(--ease-out), color var(--dur-tip) var(--ease-out), border-color var(--dur-tip) var(--ease-out);
   }
   body.desktop-layout .sidebar__side-btn:hover{background:var(--surface-variant); color:var(--on-bg)}
   body.desktop-layout .sidebar__side-btn:focus-visible{outline:2px solid var(--primary); outline-offset:2px}
   body.desktop-layout .sidebar__side-btn svg{width:18px; height:18px}
   /* 主题按钮：太阳/月亮叠放居中，显隐复用全局 .ico-sun/.ico-moon 规则 */
   body.desktop-layout #btnThemeSide{position:relative}
-  body.desktop-layout #btnThemeSide svg{position:absolute; transition:opacity .3s var(--ease), transform .5s var(--ease-emph)}
+  body.desktop-layout #btnThemeSide svg{position:absolute; transition:opacity var(--dur-modal) var(--ease-out), transform var(--dur-modal) var(--ease-out)}
 
   /* 收起态：只留图标，全部竖排居中（品牌标/收起/应用图标/主题/设置中轴线对齐） */
   body.desktop-layout.sidebar-collapsed .sidebar{padding-left:var(--s2); padding-right:var(--s2)}
@@ -1740,6 +1845,8 @@ const I18N_EN = {
     "没有找到匹配的任务": "No matching tasks",
     "没有标题或备注包含「{q}」的任务。": "No task has \"{q}\" in its title or notes.",
     "搜索任务": "Search tasks",
+    "搜索任务…": "Search tasks…",
+    "清除搜索": "Clear search",
     "创建第一个任务": "Create your first task",
     "还没有完成记录": "No completed tasks yet",
     "还没有专注记录": "No focus records yet",
@@ -1978,6 +2085,71 @@ function fmtDuration(ms){
   if (h > 0)  return { text:`${h}:${pad(m)}:${pad(sec)}`, unit:'' };
   if (m > 0)  return { text:`${m}:${pad(sec)}`, unit:'' };
   return { text:`${sec}`, unit:(LANG === 'en') ? 's' : '秒' };
+}
+
+/* ---------------- 倒计时数字：按位包裹 + 逐位滚动 ----------------
+   视觉层把时间串拆成 span（数字位 .cd__dig / 分隔符 .cd__sep），
+   只有真正发生变化的那一位播放纵向滚动；读屏层 .cd__sr 始终给出完整时间文本，
+   不会读到滚动过程中的中间状态。
+   计算逻辑（fmtDuration / remainingOf / TICK_MS）完全不动，这里只负责展示层。 */
+const CD_DIGIT = /[0-9]/;
+function cdSigOf(text){
+  return String(text).split('').map(function(c){ return CD_DIGIT.test(c) ? 'd' : 's'; }).join('');
+}
+function timeHTML(text, unit){
+  let h = '';
+  String(text).split('').forEach(function(c){
+    h += CD_DIGIT.test(c)
+      ? '<span class="cd__dig" aria-hidden="true">' + esc(c) + '</span>'
+      : '<span class="cd__sep" aria-hidden="true">' + esc(c) + '</span>';
+  });
+  return '<span class="cd__sr">' + esc(text + (unit ? ' ' + unit : '')) + '</span>'
+       + '<span class="cd__in">' + h + '</span>'
+       + (unit ? '<small>' + esc(unit) + '</small>' : '');
+}
+function rollDigit(node, ch){
+  node.textContent = ch;
+  if (reducedMotion()) return;
+  node.classList.remove('is-roll');
+  void node.offsetWidth;               /* 强制回流，保证连续两次变化都能重新播放 */
+  node.classList.add('is-roll');
+  if (node.__rollT) clearTimeout(node.__rollT);
+  node.__rollT = setTimeout(function(){ node.classList.remove('is-roll'); }, 320);
+}
+function paintTime(el, text, unit){
+  if (!el) return;
+  unit = unit || '';
+  const sig = cdSigOf(text);
+  if (el.__cdSig === undefined && el.dataset.cdSig === sig){
+    /* 首次接管已有结构（由 taskHTML 渲染），直接进入增量更新 */
+    el.__cdSig = sig;
+    el.__cdChars = Array.prototype.map.call(el.querySelectorAll('.cd__in > span'), function(n){ return n.textContent; });
+    return;
+  }
+  if (el.__cdSig !== sig){
+    el.innerHTML = timeHTML(text, unit);
+    el.__cdSig = sig;
+    el.__cdChars = String(text).split('');
+    return;
+  }
+  const chars = String(text).split('');
+  const nodes = el.querySelectorAll('.cd__in > span');
+  for (let i = 0; i < chars.length; i++){
+    if (chars[i] === el.__cdChars[i]) continue;
+    const node = nodes[i];
+    if (!node) continue;
+    if (node.classList.contains('cd__dig')) rollDigit(node, chars[i]);
+    else node.textContent = chars[i];
+  }
+  el.__cdChars = chars;
+  const sr = el.querySelector('.cd__sr');
+  if (sr) sr.textContent = text + (unit ? ' ' + unit : '');
+}
+
+/* 进度条比例：改为 transform 缩放，避免动画 width 触发布局；保留至少 8px 可见 */
+function progressScale(p, w){
+  p = clamp(p, 0, 1);
+  return (w > 0) ? Math.max(p, 8 / w) : Math.max(p, 0.02);
 }
 
 function relTime(ts){
@@ -2224,13 +2396,13 @@ function paintTaskCard(card, t){
     const timeEl = $('.cd__time', cd);
     if (timeEl){
       const txt = t.mode === 'pomodoro' ? fmtDuration(phaseAt(t, at).remain).text : fmtDuration(remainingOf(t)).text;
-      if (timeEl.textContent !== txt) timeEl.textContent = txt;
+      paintTime(timeEl, txt, '');
     }
     const bar = $('.mini-progress > i', cd);
     const prog = $('.mini-progress', cd);
     if (bar && prog){
       prog.classList.toggle('is-over', expired);
-      bar.style.width = (clamp(progressOf(t), 0, 1) * 100).toFixed(1) + '%';
+      bar.style.transform = 'scaleX(' + progressScale(progressOf(t), prog.clientWidth).toFixed(4) + ')';
     }
   }
 
@@ -2279,7 +2451,7 @@ function paintCountdown(el, t, rem){
   el.classList.toggle('cd--soon', soon && !over && t.status!=='done');
 
   const f = fmtDuration(rem);
-  if (timeEl) timeEl.innerHTML = `${esc(f.text)}${f.unit?`<small>${f.unit}</small>`:''}`;
+  if (timeEl) paintTime(timeEl, f.text, f.unit);
 
   if (labelEl) labelEl.textContent = cdLabel(t, rem);
 
@@ -2456,6 +2628,7 @@ const PAUSE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><
    Android 路径（存在 AndroidBridge）整体跳过，主题行为完全不变。 */
 const ACCENT_VARS = ['--primary','--on-primary','--primary-container','--on-primary-container',
                      '--accent','--on-accent','--accent-strong','--accent-soft','--progress'];
+let ACCENT_APPLIED = false;   /* 记录强调色覆盖是否由本函数写入，用于区分「清自己的」与「清原生的」 */
 function hexToRgb(hex){
   const m = /^#?([\da-f]{6})$/i.exec(String(hex || '').trim());
   if (!m) return null;
@@ -2471,7 +2644,10 @@ function applyAccent(dark){
   const onNative = !!(window.AndroidBridge && typeof window.AndroidBridge === 'object');
   const rgb = onNative ? null : hexToRgb(prefs.accent);
   if (!rgb){                                  // 无自定义色 / 原生路径：清掉覆盖，回到主题后备
-    ACCENT_VARS.forEach(k => root.style.removeProperty(k));
+    /* 只清掉本函数自己写进去的变量；原生下发的令牌（--accent 等）必须保留，
+       否则浏览器端模拟原生下发 / APK 端都会被抹掉强调色。 */
+    if (ACCENT_APPLIED) ACCENT_VARS.forEach(k => root.style.removeProperty(k));
+    ACCENT_APPLIED = false;
     return;
   }
   const { r, g, b } = rgb;
@@ -2487,6 +2663,7 @@ function applyAccent(dark){
   root.style.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
   root.style.setProperty('--primary-container', dark ? mix(0,0,0,.62) : mix(255,255,255,.86));
   root.style.setProperty('--on-primary-container', dark ? mix(255,255,255,.30) : mix(0,0,0,.28));
+  ACCENT_APPLIED = true;
 }
 function setAccent(hex, silent){
   prefs.accent = hexToRgb(hex) ? (hex.charAt(0)==='#'?hex:'#'+hex) : null;
@@ -3027,6 +3204,16 @@ function emptyHTML(title, desc, withClear, withCreate){
     + '</div>';
 }
 
+/* 空状态入场：图标 → 标题 → 描述 → 按钮，共 600ms。
+   只在「首次出现」时播放；从有内容切到空才播，重渲染不重播。 */
+let lastAreaEmpty = false;
+function playEmptyIntro(scope){
+  const el = (scope || document).querySelector('.empty');
+  if (!el || reducedMotion()) return;
+  el.classList.add('empty--in');
+  setTimeout(function(){ el.classList.remove('empty--in'); }, 700);
+}
+
 function staggerIn(scope){
   if (animScale === 0) return;
   $$('.task', scope || document).forEach(function(el, i){
@@ -3045,17 +3232,21 @@ function render(){
   $('#countPill').textContent = Tn('{n} 项', { n: p.arr.length });
 
   const area = $('#listArea');
+  let isEmpty = false;
   if (searchQuery && !p.arr.length){
     area.innerHTML = emptyHTML(T('没有找到匹配的任务'), Tn('没有标题或备注包含「{q}」的任务。', { q: searchQuery }));
+    isEmpty = true;
   } else if (!p.all.length){
     area.innerHTML = emptyHTML(T('还没有任务'), T('新建一个任务，为它设置倒计时或截止时间。'), false, true);
     const ec = $('#emptyCreate'); if (ec) ec.onclick = function(){ openEditor(null); };
+    isEmpty = true;
   } else if (!p.arr.length){
     area.innerHTML = emptyHTML(T('没有符合筛选的任务'), T('当前标签与状态筛选下没有任务，可清除筛选或切换标签。'), true);
     const b = $('#clearFilter');
     if (b) b.onclick = function(){
       prefs.view = 'all'; prefs.running = 'all'; syncUI(); renderAnimated(); savePrefs();
     };
+    isEmpty = true;
   } else {
     let html = '<div class="list">';
     for (const g of p.groups){
@@ -3070,6 +3261,8 @@ function render(){
     bindTaskEvents();
     if (animateNextRender){ animateNextRender = false; staggerIn(area); }
   }
+  if (isEmpty && !lastAreaEmpty) playEmptyIntro(area);
+  lastAreaEmpty = isEmpty;
 
   if (page === 'stats') renderStatsPage(p.stats);
   syncUI();
@@ -3317,14 +3510,14 @@ function taskHTML(t){
   +     '<div class="cd__main">'
   +       '<div class="cd__col">'
   +         '<span class="cd__label">' + esc(cdLabel(t, remain)) + '</span>'
-  +         '<span class="cd__time">' + esc(timeText) + '</span>'
+  +         '<span class="cd__time" data-cd-sig="' + cdSigOf(timeText) + '">' + timeHTML(timeText, '') + '</span>'
   +       '</div>'
   +       (canTimer
           ? '<button class="play" type="button" data-act="toggle-timer" aria-label="' + (isRunning ? T('暂停计时') : T('开始计时')) + '">'
             + '<span class="play__circle">' + (isRunning ? PAUSE_ICON : PLAY_ICON) + '</span></button>'
           : '')
   +     '</div>'
-  +     (t.mode !== 'deadline' ? '<div class="mini-progress' + (expired ? ' is-over' : '') + '"><i style="width:' + (clamp(progressOf(t),0,1)*100).toFixed(1) + '%"></i></div>' : '')
+  +     (t.mode !== 'deadline' ? '<div class="mini-progress' + (expired ? ' is-over' : '') + '"><i style="transform:scaleX(' + progressScale(progressOf(t), 0).toFixed(4) + ')"></i></div>' : '')
   +   '</div>'
   +   actions
   +   '<div class="meta">'
@@ -3459,33 +3652,70 @@ function closeCardMenu(){
   cardMenuId = null;
 }
 
+/* 统计：首次挂载建结构，之后原地更新。
+   数字仅在值真正变化时播放过渡（重渲染、切页返回都不重播）。 */
+function bumpNumber(node){
+  if (reducedMotion()) return;
+  node.classList.remove('is-bump');
+  void node.offsetWidth;
+  node.classList.add('is-bump');
+  if (node.__bumpT) clearTimeout(node.__bumpT);
+  node.__bumpT = setTimeout(function(){ node.classList.remove('is-bump'); }, 260);
+}
+
 function paintStats(s){
   s = s || statsOf(tasks);
-  const STAT_ICON = {
-    running:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
-    overdue:'<path d="M12 4 2.5 21h19L12 4Z"/><path d="M12 10v4M12 17h.01"/>',
-    done:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16 9"/>'
-  };
-  const cell = function(key, val, label, alert){
-    return '<button class="stat' + (alert ? ' stat--alert' : '') + '" type="button" data-stat="' + key + '"'
-      + ' aria-label="' + Tn('筛选{label}', { label: label }) + '">'
-      + '<span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (STAT_ICON[key] || '') + '</svg></span>'
-      + '<span class="stat__text"><span class="stat__num">' + val + '</span>'
-      + '<span class="stat__label">' + label + '</span></span></button>';
-  };
-  $('#stats').innerHTML =
-      cell('running', s.running, T('计时中'), false)
-    + cell('overdue', s.overdue, T('已到期'), s.overdue > 0)
-    + cell('done', s.done, T('已完成'), false);
+  const box = $('#stats');
+  if (!box) return;
+  const vals = { running:s.running, overdue:s.overdue, done:s.done };
+  const labels = { running:T('计时中'), overdue:T('已到期'), done:T('已完成') };
 
-  $$('#stats [data-stat]').forEach(function(b){
-    b.onclick = function(){
-      const k = b.dataset.stat;
-      if (k === 'overdue'){ prefs.view = 'active'; prefs.running = (prefs.running === 'overdue') ? 'all' : 'overdue'; }
-      else if (k === 'running'){ prefs.view = 'active'; prefs.running = (prefs.running === 'running') ? 'all' : 'running'; }
-      else { prefs.view = (prefs.view === 'done') ? 'all' : 'done'; prefs.running = 'all'; }
-      syncUI(); renderAnimated(); savePrefs();
+  if (!box.__cells){
+    const STAT_ICON = {
+      running:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+      overdue:'<path d="M12 4 2.5 21h19L12 4Z"/><path d="M12 10v4M12 17h.01"/>',
+      done:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16 9"/>'
     };
+    const cell = function(key, label, val){
+      return '<button class="stat" type="button" data-stat="' + key + '"'
+        + ' aria-label="' + Tn('筛选{label}', { label: label }) + '">'
+        + '<span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (STAT_ICON[key] || '') + '</svg></span>'
+        + '<span class="stat__text"><span class="stat__num">' + val + '</span>'
+        + '<span class="stat__label">' + label + '</span></span></button>';
+    };
+    box.innerHTML = cell('running', labels.running, vals.running)
+                  + cell('overdue', labels.overdue, vals.overdue)
+                  + cell('done', labels.done, vals.done);
+    box.__cells = {};
+    $$('[data-stat]', box).forEach(function(b){
+      box.__cells[b.dataset.stat] = {
+        btn: b,
+        num: b.querySelector('.stat__num'),
+        label: b.querySelector('.stat__label')
+      };
+      b.onclick = function(){
+        const k = b.dataset.stat;
+        if (k === 'overdue'){ prefs.view = 'active'; prefs.running = (prefs.running === 'overdue') ? 'all' : 'overdue'; }
+        else if (k === 'running'){ prefs.view = 'active'; prefs.running = (prefs.running === 'running') ? 'all' : 'running'; }
+        else { prefs.view = (prefs.view === 'done') ? 'all' : 'done'; prefs.running = 'all'; }
+        syncUI(); renderAnimated(); savePrefs();
+      };
+    });
+    box.classList.add('is-intro');
+    setTimeout(function(){ box.classList.remove('is-intro'); }, 800);
+  }
+
+  Object.keys(vals).forEach(function(k){
+    const c = box.__cells[k];
+    if (!c) return;
+    const v = String(vals[k]);
+    if (c.num.textContent !== v){
+      c.num.textContent = v;
+      bumpNumber(c.num);
+    }
+    if (c.label.textContent !== labels[k]) c.label.textContent = labels[k];
+    c.btn.setAttribute('aria-label', Tn('筛选{label}', { label: labels[k] }));
+    c.btn.classList.toggle('stat--alert', k === 'overdue' && vals[k] > 0);
   });
 }
 
@@ -4113,6 +4343,7 @@ function syncUI(){
 
 let page = 'tasks';
 function setPage(p){
+  const changed = (page !== p);
   page = p;
   ['tasks','stats','schedule','me'].forEach(function(k){
     const el = $('#view' + k.charAt(0).toUpperCase() + k.slice(1));
@@ -4124,6 +4355,15 @@ function setPage(p){
   const sh = $('#appShell'); if (sh) sh.scrollTop = 0; else window.scrollTo(0, 0);
   if (p === 'tasks') requestAnimationFrame(relayoutSeg);
   if (p === 'stats') renderStatsPage(statsOf(tasks));
+  /* 页面切换入场：只在路由真正变化时触发，避免重复播放 */
+  if (changed){
+    const el = $('#view' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el && !reducedMotion()){
+      el.classList.remove('view--in');
+      void el.offsetWidth;
+      el.classList.add('view--in');
+    }
+  }
 }
 
 /* 宽屏侧栏布局：仅「无 AndroidBridge 且 ≥900px」时生效。
@@ -4290,6 +4530,8 @@ function doDelete(){ /* 已改为即时删除 + 撤销，见 askDelete */ }
 function openEditor(id){
   editingId = id || null;
   const t = id ? tasks.find(x => x.id === id) : null;
+  const saveBtn = $('#btnSave');
+  if (saveBtn){ saveBtn.__busy = false; saveBtn.classList.remove('is-busy'); }
 
   $('#dlgTitle').textContent = t ? T('编辑任务') : T('新建任务');
   $('#btnSave').lastChild.textContent = t ? T('保存修改') : T('保存');
@@ -4343,8 +4585,15 @@ function syncEditorUI(){
 }
 
 function saveEditor(){
+  const btn = $('#btnSave');
+  if (btn.__busy) return;                  /* 提交中防重复触发（只动表现层，提交逻辑不变） */
+  btn.__busy = true;
+  btn.classList.add('is-busy');
+  const release = function(){ btn.__busy = false; btn.classList.remove('is-busy'); };
+
   const title = $('#inpTitle').value.trim();
   if (!title){
+    release();
     $('#fTitle').classList.add('err');
     $('#inpTitle').focus();
     toast(T('请填写任务标题'), null, true);
@@ -4365,15 +4614,16 @@ function saveEditor(){
     const m = clamp(parseInt($('#inpM').value,10) || 0, 0, 59);
     durationMs = (h*3600 + m*60) * 1000;
     if (durationMs <= 0){
+      release();
       toast(T('请设置大于 0 的时长'), null, true);
       $('#inpM').focus();
       return;
     }
   } else {
     const dv = $('#inpDate').value, tv = $('#inpTime').value || '23:59';
-    if (!dv){ toast(T('请选择截止日期'), null, true); return; }
+    if (!dv){ release(); toast(T('请选择截止日期'), null, true); return; }
     dueAt = new Date(`${dv}T${tv}:00`).getTime();
-    if (!Number.isFinite(dueAt)){ toast(T('截止时间无效'), null, true); return; }
+    if (!Number.isFinite(dueAt)){ release(); toast(T('截止时间无效'), null, true); return; }
   }
 
   const desc = $('#inpDesc').value.trim();
@@ -4459,6 +4709,7 @@ function saveEditor(){
 
   save();
   closeScrim('#dlgScrim');
+  setTimeout(release, 300);      /* 关闭动画走完再恢复按钮，连点不会重复提交 */
   renderAnimated();
   startTick();
 }
@@ -4487,8 +4738,30 @@ function pauseTask(t){
 }
 
 /* ---------------- Scrim helpers ---------------- */
-function openScrim(sel){ $(sel).classList.add('open'); setScrollLocked(true); }
-function closeScrim(sel){ $(sel).classList.remove('open'); setScrollLocked(false); }
+function openScrim(sel){
+  const el = $(sel); if (!el) return;
+  if (el.__closeTimer){ clearTimeout(el.__closeTimer); el.__closeTimer = null; }
+  el.classList.remove('is-closing');
+  el.classList.add('open');
+  setScrollLocked(true);
+}
+/* 关闭走反向过渡：动画结束后再卸载，避免弹窗「啪」地消失 */
+function closeScrim(sel){
+  const el = $(sel); if (!el) return;
+  if (!el.classList.contains('open')) return;
+  if (el.__closeTimer){ clearTimeout(el.__closeTimer); el.__closeTimer = null; }
+  if (reducedMotion()){
+    el.classList.remove('open','is-closing');
+    setScrollLocked(false);
+    return;
+  }
+  el.classList.add('is-closing');
+  el.__closeTimer = setTimeout(function(){
+    el.__closeTimer = null;
+    el.classList.remove('open','is-closing');
+    if (!anyScrimOpen()) setScrollLocked(false);
+  }, 240);
+}
 function anyScrimOpen(){ return !!$('.scrim.open'); }
 function closeTopScrim(){
   const open = $$('.scrim.open');
