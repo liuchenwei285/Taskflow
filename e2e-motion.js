@@ -420,7 +420,36 @@ function truthy(label, v){ eq(label, !!v, true); }
     return m ? parseFloat(m[1].split(',')[0]) : null;
   });
   truthy('宽屏统计卡图标 hover 放大 1.06', iconScale !== null && Math.abs(iconScale - 1.06) < 0.02);
+
+  /* 宽屏：空壳顶栏不吸顶，滚动时不再压出一条空白遮挡带 */
+  const wideScroll = await wide.evaluate(async () => {
+    const sh = document.getElementById('appShell');
+    sh.scrollTop = 150;
+    await new Promise(r => setTimeout(r, 250));
+    const ab = document.getElementById('appbar');
+    return { top: Math.round(ab.getBoundingClientRect().top), pos: getComputedStyle(ab).position };
+  });
+  truthy('宽屏空壳顶栏不吸顶', wideScroll.pos !== 'sticky');
+  truthy('宽屏滚动后顶栏随内容滚走', wideScroll.top < 0);
   await wide.close();
+
+  /* 窄屏：滚动后顶栏下方有渐隐托底 + 底部分隔线，内容不再被硬切 */
+  const narrowScroll = await page.evaluate(async () => {
+    const sh = document.getElementById('appShell');
+    sh.scrollTop = 150;
+    await new Promise(r => setTimeout(r, 250));
+    const ab = document.getElementById('appbar');
+    const b4 = getComputedStyle(ab, '::before');
+    return {
+      scrolled: sh.scrollTop > 0,
+      fadeOpacity: parseFloat(b4.opacity),
+      fadeH: parseFloat(b4.height),
+      line: getComputedStyle(ab, '::after').backgroundColor
+    };
+  });
+  truthy('窄屏可滚动', narrowScroll.scrolled);
+  truthy('窄屏顶栏下有渐隐托底(≥16px)', narrowScroll.fadeOpacity === 1 && narrowScroll.fadeH >= 16);
+  truthy('窄屏顶栏下有底部分隔线', narrowScroll.line !== 'rgba(0, 0, 0, 0)');
 
   /* ---------- 13. 减少动态效果 ---------- */
   const ctx2 = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });

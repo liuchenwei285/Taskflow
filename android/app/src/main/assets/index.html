@@ -156,8 +156,8 @@ body.is-locked .app-shell{overflow:hidden}
 }
 .appbar::after{content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
   background:transparent; transition:background var(--dur-soft) var(--ease-out)}
-/* 折叠态：标题栏下方 12dp 渐变托底，内容淡出而非被硬切 */
-.appbar::before{content:''; position:absolute; left:0; right:0; top:100%; height:var(--s3);
+/* 折叠态：标题栏下方渐变托底，内容淡出而非被硬切 */
+.appbar::before{content:''; position:absolute; left:0; right:0; top:100%; height:20px;
   background:linear-gradient(to bottom, var(--surface), rgba(0,0,0,0));
   opacity:0; transition:opacity var(--dur-soft) var(--ease-out); pointer-events:none}
 .appbar.is-collapsed::before{opacity:1}
@@ -180,7 +180,7 @@ body.is-locked .app-shell{overflow:hidden}
   max-height:16px; overflow:hidden;
   transition:max-height var(--dur-soft) var(--ease-out), opacity var(--dur-tip) var(--ease-out), transform var(--dur-soft) var(--ease-out)}
 /* 折叠态：滚动 > 8dp */
-.appbar.is-collapsed{min-height:56px; background:var(--surface)}
+.appbar.is-collapsed{min-height:48px; background:var(--surface)}
 .appbar.is-collapsed .brand__logo{width:40px; height:40px}
 .appbar.is-collapsed .brand__logo svg{width:20px; height:20px}
 .appbar.is-collapsed .brand__text{gap:0}
@@ -992,6 +992,8 @@ body:not(.desktop-layout) .snackbar-wrap{
   /* ---- 宽屏顶栏：品牌与主题按钮移到侧栏，appbar 保留 56px 空壳（E2E 断言高度） ---- */
   body.desktop-layout .appbar__brand,
   body.desktop-layout .appbar > .theme-btn{visibility:hidden}
+  /* 空壳顶栏不吸顶：否则滚动时它会像一条空白遮挡带压在内容上方 */
+  body.desktop-layout .appbar{position:static}
 
   /* ---- 宽屏任务页标题行：标题 + 搜索框 + 顶部新建（原右下 FAB 隐藏） ---- */
   body.desktop-layout .page-head{
@@ -1314,11 +1316,11 @@ body:not(.desktop-layout) .snackbar-wrap{
 
     <div class="card">
       <div class="card__t">主题</div>
-      <div class="card__d">右上角按钮切换深浅色；两套主题共用同一布局。</div>
+      <div class="card__d">点主题按钮切换深浅色，手机端在顶栏右上角、电脑端在侧栏右下角；两套主题共用同一布局与动效。</div>
       <div class="accent-row hidden" id="accentRow">
         <div>
           <div class="switch-row__t">自定义主题色</div>
-          <div class="switch-row__d">选择强调色，应用于按钮、进度和选中状态</div>
+          <div class="switch-row__d">选一个强调色，按钮、进度条、选中与焦点状态都会跟随；「恢复默认」还原初始配色。</div>
         </div>
         <div class="accent-row__ctl">
           <input type="color" id="accentPicker" class="accent-picker" value="#355C9A" aria-label="自定义主题色">
@@ -1758,9 +1760,9 @@ const I18N_EN = {
     "不限": "Any",
     "清除筛选": "Clear filter",
     "主题": "Theme",
-    "右上角按钮切换深浅色；两套主题共用同一布局。": "Use the button in the top-right to switch themes; both share the same layout.",
+    "点主题按钮切换深浅色，手机端在顶栏右上角、电脑端在侧栏右下角；两套主题共用同一布局与动效。": "Tap the theme button to switch light/dark — top-right on phones, bottom-right of the sidebar on desktop. Both themes share the same layout and motion.",
     "自定义主题色": "Custom accent colour",
-    "选择强调色，应用于按钮、进度和选中状态": "Pick an accent colour for buttons, progress and selection",
+    "选一个强调色，按钮、进度条、选中与焦点状态都会跟随；「恢复默认」还原初始配色。": "Pick an accent colour; buttons, progress bars, selection and focus states follow it. “Restore default” brings back the original palette.",
     "恢复默认主题色": "Reset accent colour",
     "恢复默认": "Reset",
     "主题色已更新": "Accent colour updated",
