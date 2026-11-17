@@ -147,22 +147,16 @@ body.is-locked .app-shell{overflow:hidden}
 .num{font-variant-numeric:tabular-nums}
 
 /* ---------------- 顶栏：展开 56 / 折叠 48 ----------------
-   顶栏背景始终等于页面底色：滚动后不再出现一条比页面更亮的「色块」，
-   底部也不画分隔线，内容靠下方渐隐自然消融，不留一条无来由的横线。 */
+   顶栏始终是不透明、与页面同底色的实心条：不画分隔线，也不挂任何渐变伪元素。
+   渐变托底曾在预览 / 拼接截图等环境里脱离顶栏本体、单独压在内容上形成色带，
+   故整体移除；内容滚到栏下即被实心栏自然遮住，是标准应用行为。 */
 .appbar{
   position:sticky; top:0; z-index:40;
   min-height:56px; padding:var(--s1) var(--track);
   display:flex; align-items:center; gap:var(--s2);
   background:var(--bg);
-  transition:min-height var(--dur-soft) var(--ease-out), background var(--dur-soft) var(--ease-out);
+  transition:min-height var(--dur-soft) var(--ease-out);
 }
-.appbar::after{content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
-  background:transparent; transition:background var(--dur-soft) var(--ease-out)}
-/* 折叠态：标题栏下方渐变托底，内容淡出而非被硬切 */
-.appbar::before{content:''; position:absolute; left:0; right:0; top:100%; height:20px;
-  background:linear-gradient(to bottom, var(--bg), rgba(0,0,0,0));
-  opacity:0; transition:opacity var(--dur-soft) var(--ease-out); pointer-events:none}
-.appbar.is-collapsed::before{opacity:1}
 .appbar__brand{flex:1; min-width:0; display:flex; align-items:center; gap:var(--s3)}
 .brand__logo{
   flex:none; width:48px; height:48px; border-radius:var(--r-md);
@@ -3238,8 +3232,6 @@ function staggerIn(scope){
 }
 
 function render(){
-  $('#appbar').classList.toggle('scrolled', window.scrollY > 8);
-
   paintFilterMenu(tasks);          // 先按当前标签裁剪状态选项（无意义项隐藏）
   const p = pipeline();
   paintStats(p.stats);
@@ -5049,7 +5041,6 @@ function bindGlobal(){
   const onScroll = function(){
     const y = scroller ? scroller.scrollTop : window.scrollY;
     const bar = $('#appbar');
-    bar.classList.toggle('scrolled', y > 8);
     bar.classList.toggle('is-collapsed', y > 8);
     placeSortMenu();                 // UI16：菜单随内容锚点重新定位
   };

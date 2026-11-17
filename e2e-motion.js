@@ -431,37 +431,38 @@ function truthy(label, v){ eq(label, !!v, true); }
   });
   truthy('宽屏统计卡图标 hover 放大 1.06', iconScale !== null && Math.abs(iconScale - 1.06) < 0.02);
 
-  /* 宽屏：空壳顶栏不吸顶，滚动时不再压出一条空白遮挡带 */
+  /* 宽屏：空壳顶栏不吸顶，滚动时不再压出一条空白遮挡带（统计页内容足够高，可真实滚动） */
+  await wide.locator('button[data-page="stats"] >> visible=true').first().click();
+  await wide.waitForTimeout(350);
   const wideScroll = await wide.evaluate(async () => {
     const sh = document.getElementById('appShell');
     sh.scrollTop = 150;
     await new Promise(r => setTimeout(r, 250));
     const ab = document.getElementById('appbar');
-    return { top: Math.round(ab.getBoundingClientRect().top), pos: getComputedStyle(ab).position };
+    return { top: Math.round(ab.getBoundingClientRect().top), pos: getComputedStyle(ab).position, scrolled: sh.scrollTop > 0 };
   });
+  truthy('宽屏统计页可真实滚动', wideScroll.scrolled);
   truthy('宽屏空壳顶栏不吸顶', wideScroll.pos !== 'sticky');
   truthy('宽屏滚动后顶栏随内容滚走', wideScroll.top < 0);
   await wide.close();
 
-  /* 窄屏：滚动后顶栏与页面同底色（无色块）、无分隔线，内容靠渐隐消融 */
+  /* 窄屏：滚动后顶栏与页面同底色（无色块）、无分隔线、无渐变伪元素覆盖层 */
   const narrowScroll = await page.evaluate(async () => {
     const sh = document.getElementById('appShell');
     sh.scrollTop = 150;
     await new Promise(r => setTimeout(r, 250));
     const ab = document.getElementById('appbar');
-    const b4 = getComputedStyle(ab, '::before');
     return {
       scrolled: sh.scrollTop > 0,
-      fadeOpacity: parseFloat(b4.opacity),
-      fadeH: parseFloat(b4.height),
-      line: getComputedStyle(ab, '::after').backgroundColor,
+      beforeContent: getComputedStyle(ab, '::before').content,
+      afterContent: getComputedStyle(ab, '::after').content,
       barBg: getComputedStyle(ab).backgroundColor,
       pageBg: getComputedStyle(document.body).backgroundColor
     };
   });
   truthy('窄屏可滚动', narrowScroll.scrolled);
-  truthy('窄屏顶栏下有渐隐托底(≥16px)', narrowScroll.fadeOpacity === 1 && narrowScroll.fadeH >= 16);
-  truthy('窄屏顶栏无分隔线', narrowScroll.line === 'rgba(0, 0, 0, 0)');
+  truthy('窄屏顶栏无渐变托底伪元素', narrowScroll.beforeContent === 'none');
+  truthy('窄屏顶栏无分隔线伪元素', narrowScroll.afterContent === 'none');
   truthy('窄屏顶栏与页面同底色(无色块)', narrowScroll.barBg === narrowScroll.pageBg);
 
   /* ---------- 13. 减少动态效果 ---------- */
