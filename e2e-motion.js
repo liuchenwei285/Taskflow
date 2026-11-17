@@ -390,6 +390,22 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('品牌主色未变', store.primary, '#355C9A');
   truthy('自定义主题色控件仍在', store.accentPicker);
 
+  /* 自定义强调色（用户粉色）仍能生效 */
+  const accent = await page.evaluate(() => {
+    const inp = document.querySelector('#accentPicker');
+    if (!inp) return null;
+    inp.value = '#FF3D8B';
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+    inp.dispatchEvent(new Event('change', { bubbles: true }));
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      primary: cs.getPropertyValue('--primary').trim().toUpperCase(),
+      accent: cs.getPropertyValue('--accent').trim().toUpperCase()
+    };
+  });
+  truthy('自定义强调色写入 --primary', accent && accent.primary === '#FF3D8B');
+  truthy('自定义强调色写入 --accent', accent && accent.accent === '#FF3D8B');
+
   /* ---------- 12. 宽屏：统计卡图标放大 ---------- */
   const wide = await ctx.newPage();
   await wide.setViewportSize({ width: 1280, height: 800 });
