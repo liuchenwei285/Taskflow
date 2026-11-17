@@ -312,7 +312,7 @@ console.log('\n[15] 已完成字段校验（HTML 关键实现存在性检查）'
     ['五态统一 stateKeyOf', /function stateKeyOf/],
     ['空状态互斥渲染',     /if \(!p\.all\.length\)/],
     ['单数据管线',         /function pipeline\(\)/],
-    ['纯CSS主题淡入淡出',  /transition:background \.2s var\(--ease\), color \.2s var\(--ease\)/],
+    ['纯CSS主题淡入淡出',  /transition:background var\(--dur-soft\) var\(--ease-out\), color var\(--dur-soft\) var\(--ease-out\)/],
     ['无ViewTransition',  /^(?![\s\S]*startViewTransition)/],
     ['自定义主题色控件',   /id="accentPicker"/],
     ['强调色派生逻辑',     /function applyAccent\(/],
@@ -325,12 +325,49 @@ console.log('\n[15] 已完成字段校验（HTML 关键实现存在性检查）'
     ['控件边界色',          /--outline-strong:#7A808A/],
     ['原生转场桥',          /startThemeSwitch/],
     ['动态取色开关',        /bindDynamicRow/],
-    ['卡片无彩色竖条',      /task__bar/],
+    ['卡片无彩色竖条',      !/task__bar/.test(html)],
     ['已到期并入筛选',      /present\.overdue/],
     ['FAB',                 /class="fab"/],
     ['Snackbar 撤销删除',   /label:T\('撤销'\)/],
+
+    /* ---- 微交互动效系统 ---- */
+    ['动效令牌-时长',      /--dur-hover:120ms;[\s\S]*--dur-press:100ms;[\s\S]*--dur-tip:150ms;/],
+    ['动效令牌-弹窗/页面',  /--dur-modal:220ms;[\s\S]*--dur-page:220ms;/],
+    ['动效令牌-卡片/侧栏',  /--dur-card:300ms;[\s\S]*--dur-sidebar:240ms;/],
+    ['动效令牌-空状态',    /--dur-empty:600ms;[\s\S]*--dur-empty-item:200ms;/],
+    ['动效令牌-曲线',      /--ease-out:cubic-bezier\(0,0,\.2,1\);[\s\S]*--ease-in:cubic-bezier\(\.4,0,1,1\);[\s\S]*--ease-inout:cubic-bezier\(\.4,0,\.2,1\);/],
+    ['动效令牌-位移',      /--move-page:6px;[\s\S]*--move-card:2px;[\s\S]*--move-empty:10px;/],
+    ['无散落时长残留',      !/transition:[^;]*\b\d+(\.\d+)?m?s\b/.test(html)],
+    ['按钮有 transition',   /\.btn\{[\s\S]*?transition:transform var\(--dur-press\)/],
+    ['按钮按压 0.97',       /\.btn:active\{transform:scale\(\.97\)\}/],
+    ['FAB 按压 0.97',       /\.fab:active\{transform:scale\(\.97\)\}/],
+    ['粉色新建 hover 层次', /\.fab:hover\{box-shadow:/],
+    ['禁用态无反馈',       /\.btn\[disabled\]\{opacity:\.4; pointer-events:none\}/],
+    ['统计卡 hover 上浮',   /\.stat:hover\{transform:translateY\(calc\(-1 \* var\(--move-card\)\)\)/],
+    ['统计卡图标放大1.06', /\.stat:hover \.stat__icon\{transform:scale\(1\.06\)\}/],
+    ['统计卡首次淡入',     /\.stats\.is-intro \.stat\{animation:statIn/],
+    ['统计数字仅变化时过渡', /if \(c\.num\.textContent !== v\)/],
+    ['空状态错峰序列',     /\.empty--in > \*:nth-child\(1\)\{animation-delay:0ms\}[\s\S]*nth-child\(2\)\{animation-delay:150ms\}[\s\S]*nth-child\(3\)\{animation-delay:280ms\}[\s\S]*nth-child\(4\)\{animation-delay:400ms\}/],
+    ['空状态只播一次',     /if \(isEmpty && !lastAreaEmpty\) playEmptyIntro\(area\);/],
+    ['页面切换仅路由变化', /const changed = \(page !== p\);/],
+    ['页面切换动效',      /\.view--in\{animation:viewIn var\(--dur-page\)/],
+    ['弹窗反向过渡',      /\.scrim\.is-closing \.dialog\{/],
+    ['弹窗关闭延迟卸载',  /el\.classList\.add\('is-closing'\)/],
+    ['提交防重复',        /if \(btn\.__busy\) return;/],
+    ['倒计时按位包裹',    /function paintTime\(el, text, unit\)/],
+    ['倒计时逐位滚动',    /\.cd__dig\.is-roll\{animation:cdRoll var\(--dur-roll\)/],
+    ['倒计时固定位宽',    /\.cd__dig\{display:inline-block; font-variant-numeric:tabular-nums\}/],
+    ['读屏读完整时间',    /class="cd__sr"/],
+    ['进度条用 transform', /\.mini-progress > i\{[\s\S]*?transform-origin:left center/],
+    ['进度条不再动画width', !/\.mini-progress > i\{[^}]*transition:width/.test(html)],
+    ['减少动态效果降级',  /@media\(prefers-reduced-motion:reduce\)\{[\s\S]*?\.cd__dig\.is-roll[^{]*\{animation:none!important\}/],
+    ['焦点可见',          /:focus-visible\{\s*outline:2px solid var\(--primary\)/],
   ];
-  for (const [label, re] of need){ if (label === '卡片无彩色竖条') truthy(label, !re.test(html)); else truthy(label, re.test(html)); }
+  for (const [label, re] of need){
+    const ok = (typeof re === 'boolean') ? re : re.test(html);
+    ok ? pass++ : fail++;
+    console.log(`${ok?'  PASS':'  FAIL'}  ${label}${ok?'':'  (未匹配)'}`);
+  }
   truthy('无硬编码品牌紫 #7262D6', !/#7262D6/i.test(html));
   truthy('无硬编码旧紫 #6750A4', !/#6750A4/i.test(html));
   truthy('无旧黄绿强调色', !/C6F24E/i.test(html));

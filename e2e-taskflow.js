@@ -17,7 +17,7 @@ function truthy(label, v){ eq(label, !!v, true); }
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   // 固定中文环境：应用默认跟随系统语言，测试断言以中文文案为准
-  const ctx = await browser.newContext({ locale: 'zh-CN' });
+  const ctx = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
 
   const errors = [];
@@ -59,7 +59,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   truthy('Snackbar 提示', await page.locator('.snack').count() > 0);
 
   /* ---------- 3. 倒计时实时递减 ---------- */
-  const readCd = () => page.locator('.task .cd__time').textContent();
+  const readCd = () => page.locator('.task .cd__time .cd__in').textContent();
   const t1 = await readCd();
   truthy(`倒计时初值 "${t1}" 匹配 m:ss`, /^\d+:\d{2}$/.test(t1.trim()));
   await page.waitForTimeout(2400);
@@ -110,9 +110,9 @@ function truthy(label, v){ eq(label, !!v, true); }
     Math.abs(afterReload.rem - beforeReload.rem) < 6000);
   eq('刷新后仍为运行中', afterReload.status, 'running');
   truthy('刷新后继续走时', await page.evaluate(async () => {
-    const a = document.querySelector('.task .cd__time').textContent;
+    const a = document.querySelector('.task .cd__time .cd__in').textContent;
     await new Promise(r => setTimeout(r, 2200));
-    return document.querySelector('.task .cd__time').textContent !== a;
+    return document.querySelector('.task .cd__time .cd__in').textContent !== a;
   }));
 
   /* ---------- 8. 再建两个任务（测试排序/分组/筛选） ---------- */
@@ -144,7 +144,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   const byDeadline = await page.locator('.task__title').allTextContents();
   // 剩余时间升序：每张卡片的剩余量应单调不减
   const remSeq = await page.locator('.task').evaluateAll(els => els.map(e => {
-    const txt = e.querySelector('.cd__time').textContent.trim();
+    const txt = e.querySelector('.cd__time .cd__in').textContent.trim();
     const p = txt.split(':').map(Number);
     return p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p[0]*60+p[1];
   }));
@@ -239,8 +239,8 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(300);
   eq('重置后状态', await resetCard.locator('.cd__label').textContent(), '未开始');
   // 60 分钟按 fmtDuration 规则显示为 h:mm:ss
-  eq('重置后倒计时恢复满值', (await resetCard.locator('.cd__time').textContent()).trim(), '1:00:00');
-  truthy('重置后进度条归零', await resetCard.locator('.mini-progress > i').evaluate(e => parseFloat(e.style.width) < 1));
+  eq('重置后倒计时恢复满值', (await resetCard.locator('.cd__time .cd__in').textContent()).trim(), '1:00:00');
+  truthy('重置后进度条归零', await resetCard.locator('.mini-progress > i').evaluate(e => { const m=/scaleX(([0-9.]+))/.exec(e.style.transform||''); return m ? parseFloat(m[1]) < 0.01 : true; }));
 
   /* ---------- 18. 删除（即时移除 + 撤销） ---------- */
   const delCard = page.locator('.task').filter({ hasText: '低优先级归档' }).first();
@@ -259,11 +259,11 @@ function truthy(label, v){ eq(label, !!v, true); }
   const ddlCard = page.locator('.task').filter({ hasText: '提交投标文件' }).first();
   eq('截止模式状态文案', await ddlCard.locator('.cd__label').textContent(), '距截止');
   truthy('截止时间 chip 存在', await ddlCard.locator('.chip').allTextContents().then(a => a.some(t => t.includes('截止'))));
-  const ddlTime = (await ddlCard.locator('.cd__time').textContent()).trim();
+  const ddlTime = (await ddlCard.locator('.cd__time .cd__in').textContent()).trim();
   // 1 小时以内 -> m:ss；超过 1 小时 -> h:mm:ss。两种都合法
   truthy(`截止倒计时格式 "${ddlTime}"`, /^\d{1,2}:\d{2}(:\d{2})?$/.test(ddlTime));
   await page.waitForTimeout(2200);
-  truthy('截止倒计时递减', (await ddlCard.locator('.cd__time').textContent()).trim() !== ddlTime);
+  truthy('截止倒计时递减', (await ddlCard.locator('.cd__time .cd__in').textContent()).trim() !== ddlTime);
   eq('截止模式不显示进度条', await ddlCard.locator('.mini-progress').count(), 0);
 
   /* ---------- 20. 状态筛选（合并入筛选与排序菜单）：计时中 ---------- */
@@ -688,14 +688,14 @@ function truthy(label, v){ eq(label, !!v, true); }
   const wideW = await sideW();
   truthy('侧栏展开宽度 240px', wideW === 240);
   await page.click('#sidebarToggle');
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(320);   /* 等收放过渡走完再量宽度 */
   eq('收起后宽度 64px', await sideW(), 64);
   eq('收起后 aria-expanded=false', await page.getAttribute('#sidebarToggle', 'aria-expanded'), 'false');
   truthy('收起后品牌文字隐藏', !(await page.locator('.sidebar__footer-brand').isVisible()));
   truthy('收起后主题按钮仍可见', await page.locator('#btnThemeSide').isVisible());
   truthy('收起后设置按钮仍可见', await page.locator('#sidebar [data-page="me"]').isVisible());
   await page.click('#sidebarToggle');
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(320);   /* 等展开过渡走完再量宽度 */
   eq('再展开宽度 240px', await sideW(), 240);
   // 底部顺序：主题按钮在设置按钮左边
   const footOrder = await page.evaluate(() => {
