@@ -443,7 +443,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   truthy('宽屏滚动后顶栏随内容滚走', wideScroll.top < 0);
   await wide.close();
 
-  /* 窄屏：滚动后顶栏下方有渐隐托底 + 底部分隔线，内容不再被硬切 */
+  /* 窄屏：滚动后顶栏与页面同底色（无色块）、无分隔线，内容靠渐隐消融 */
   const narrowScroll = await page.evaluate(async () => {
     const sh = document.getElementById('appShell');
     sh.scrollTop = 150;
@@ -454,12 +454,15 @@ function truthy(label, v){ eq(label, !!v, true); }
       scrolled: sh.scrollTop > 0,
       fadeOpacity: parseFloat(b4.opacity),
       fadeH: parseFloat(b4.height),
-      line: getComputedStyle(ab, '::after').backgroundColor
+      line: getComputedStyle(ab, '::after').backgroundColor,
+      barBg: getComputedStyle(ab).backgroundColor,
+      pageBg: getComputedStyle(document.body).backgroundColor
     };
   });
   truthy('窄屏可滚动', narrowScroll.scrolled);
   truthy('窄屏顶栏下有渐隐托底(≥16px)', narrowScroll.fadeOpacity === 1 && narrowScroll.fadeH >= 16);
-  truthy('窄屏顶栏下有底部分隔线', narrowScroll.line !== 'rgba(0, 0, 0, 0)');
+  truthy('窄屏顶栏无分隔线', narrowScroll.line === 'rgba(0, 0, 0, 0)');
+  truthy('窄屏顶栏与页面同底色(无色块)', narrowScroll.barBg === narrowScroll.pageBg);
 
   /* ---------- 13. 减少动态效果 ---------- */
   const ctx2 = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
