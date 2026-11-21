@@ -23,6 +23,16 @@ android/dist/
 android/backup/
 android/icon-source/legacy-icons/
 
+# Windows 独立应用：构建中间物与体积发行物不进仓库（exe/zip 走 GitHub Releases）
+windows/bin/
+windows/obj/
+windows/dist/
+windows/runs/
+
+# 测试运行产物与本地站点描述符
+runs/
+.*.qoder.site
+
 # 系统文件
 .DS_Store
 Thumbs.db
