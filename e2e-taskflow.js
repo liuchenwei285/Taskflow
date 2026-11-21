@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const URL = 'http://127.0.0.1:8899/';
+const URL = process.env.TASKFLOW_URL || 'http://127.0.0.1:8899/';
 let pass = 0, fail = 0;
 const log = [];
 function eq(label, got, want){
@@ -14,10 +14,23 @@ function eq(label, got, want){
 }
 function truthy(label, v){ eq(label, !!v, true); }
 
+async function navTo(p, name){
+  await p.evaluate((n) => { const b = document.querySelector('#sidebar [data-page="' + n + '"]'); if (b) b.click(); }, name);
+  await p.waitForTimeout(260);
+}
+
+
+/* 默认首屏为「智能编排」：本套件针对任务页，导航后统一回任务页 */
+async function goTasks(p){
+  await p.evaluate(() => { const b = document.querySelector('#sidebar [data-page="tasks"]'); if (b) b.click(); });
+  await p.waitForTimeout(260);
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   // 固定中文环境：应用默认跟随系统语言，测试断言以中文文案为准
   const ctx = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 } });
+  await ctx.addInitScript(() => localStorage.setItem('taskflow.welcome.v1', '1'));  // 回访用户起步；首访弹窗见 e2e-welcome.js
   const page = await ctx.newPage();
 
   const errors = [];
@@ -28,10 +41,13 @@ function truthy(label, v){ eq(label, !!v, true); }
 
   await page.goto(URL, { waitUntil: 'load' });
   await page.waitForTimeout(300);
+  await goTasks(page);
 
   /* ---------- 1. 初始渲染 ---------- */
   eq('空状态渲染', await page.locator('.empty h3').textContent(), '还没有任务');
-  eq('统计-计时中', await page.locator('.stat').nth(0).locator('.stat__num').textContent(), '0');
+  eq('统计板块为四块', await page.locator('.stat').count(), 4);
+  truthy('统计首块为「待开始」', (await page.locator('.stat').nth(0).locator('.stat__label').textContent()).includes('待开始'));
+  eq('统计-待开始', await page.locator('.stat').nth(0).locator('.stat__num').textContent(), '0');
   eq('标签页数量', await page.locator('#tabs button').count(), 3);
   truthy('FAB 存在', await page.locator('#btnAdd').isVisible());
 
@@ -55,10 +71,16 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('任务标题', await page.locator('.task__title').textContent(), '完成季度报告');
   eq('说明文字', await page.locator('.task__desc').textContent(), '整理 Q3 数据并输出 PPT');
   truthy('高优先级样式', await page.locator('.task').evaluate(e => e.classList.contains('pri-high')));
-  truthy('自动开始计时', await page.locator('.task').evaluate(e => e.classList.contains('is-running')));
+  truthy('新建默认「待开始」未自动计时', !(await page.locator('.task').evaluate(e => e.classList.contains('is-running'))));
+  eq('新建卡片状态文案=待开始', await page.locator('.task .cd__label').textContent(), '待开始');
+  eq('待开始大字=预计倒计时 5:00', (await page.locator('.task .cd__time .cd__in').textContent()).trim(), '5:00');
   truthy('Snackbar 提示', await page.locator('.snack').count() > 0);
 
-  /* ---------- 3. 倒计时实时递减 ---------- */
+  /* ---------- 3. 点「开始」→计时中，倒计时实时递减 ---------- */
+  await page.click('.task [data-act="toggle-timer"]');     // 待开始 → 计时中
+  await page.waitForTimeout(250);
+  truthy('开始后进入计时中', await page.locator('.task').evaluate(e => e.classList.contains('is-running')));
+  eq('计时中标签=剩余时间', await page.locator('.task .cd__label').textContent(), '剩余时间');
   const readCd = () => page.locator('.task .cd__time .cd__in').textContent();
   const t1 = await readCd();
   truthy(`倒计时初值 "${t1}" 匹配 m:ss`, /^\d+:\d{2}$/.test(t1.trim()));
@@ -80,7 +102,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(2400);
   const r2 = await readCd();
   truthy(`恢复后继续递减 (${p2} -> ${r2})`, p2 !== r2);
-  eq('恢复后状态文案', await page.locator('.task .cd__label').textContent(), '倒计时中');
+  eq('恢复后状态文案', await page.locator('.task .cd__label').textContent(), '剩余时间');
 
   /* ---------- 6. localStorage 持久化 ---------- */
   const stored = await page.evaluate(() => localStorage.getItem('taskflow.tasks.v1'));
@@ -90,24 +112,27 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('存储标题', parsed.tasks[0].title, '完成季度报告');
   eq('存储优先级', parsed.tasks[0].priority, 'high');
   eq('存储模式', parsed.tasks[0].mode, 'duration');
-  eq('存储时长 5min', parsed.tasks[0].durationMs, 300000);
-  truthy('存储了剩余时间', Number.isFinite(parsed.tasks[0].remainingMs));
+  eq('存储预计时长 5min', parsed.tasks[0].durationMs, 300000);
+  eq('存储状态为运行中', parsed.tasks[0].status, 'running');
+  truthy('存储了累计已用 accumulatedMs', Number.isFinite(parsed.tasks[0].accumulatedMs));
+  truthy('存储了本段起点 segStart(时间戳法)', Number.isFinite(parsed.tasks[0].segStart) && parsed.tasks[0].segStart > 0);
 
-  /* ---------- 7. 刷新后恢复（核心需求） ---------- */
+  /* ---------- 7. 刷新后恢复（核心需求：时间戳法续算） ---------- */
   const beforeReload = await page.evaluate(() => {
     const t = JSON.parse(localStorage.getItem('taskflow.tasks.v1')).tasks[0];
-    return { rem: t.remainingMs, status: t.status, title: t.title };
+    return { segStart: t.segStart, status: t.status, title: t.title };
   });
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(400);
   eq('刷新后任务仍在', await page.locator('.task').count(), 1);
   eq('刷新后标题正确', await page.locator('.task__title').textContent(), '完成季度报告');
   const afterReload = await page.evaluate(() => {
     const t = JSON.parse(localStorage.getItem('taskflow.tasks.v1')).tasks[0];
-    return { rem: t.remainingMs, status: t.status };
+    return { segStart: t.segStart, status: t.status };
   });
-  truthy(`刷新前后剩余时间衔接 (${beforeReload.rem}ms -> ${afterReload.rem}ms)`,
-    Math.abs(afterReload.rem - beforeReload.rem) < 6000);
+  truthy(`刷新后 segStart 保留(时间戳法) (${beforeReload.segStart} -> ${afterReload.segStart})`,
+    afterReload.segStart === beforeReload.segStart);
   eq('刷新后仍为运行中', afterReload.status, 'running');
   truthy('刷新后继续走时', await page.evaluate(async () => {
     const a = document.querySelector('.task .cd__time .cd__in').textContent;
@@ -115,42 +140,32 @@ function truthy(label, v){ eq(label, !!v, true); }
     return document.querySelector('.task .cd__time .cd__in').textContent !== a;
   }));
 
-  /* ---------- 8. 再建两个任务（测试排序/分组/筛选） ---------- */
-  const addTask = async (title, pri, preset, mode) => {
+  /* ---------- 8. 再建任务（统一模型：预计时长/截止时间可在同一任务共存） ---------- */
+  const addTask = async (title, pri, preset, ddl) => {
     await page.click('#btnAdd');
     await page.waitForTimeout(320);
     await page.fill('#inpTitle', title);
     await page.click(`#segPriority [data-pri="${pri}"]`);
-    if (mode === 'deadline'){
-      await page.click('#typeOpts [data-mode="deadline"]');
-      await page.click('#panelDeadline [data-ddl="+1h"]');
-    } else {
-      await page.click(`#panelDuration [data-preset="${preset}"]`);
-    }
+    if (preset) await page.click(`#panelDuration [data-preset="${preset}"]`);
+    if (ddl)    await page.click(`#panelDeadline [data-ddl="${ddl}"]`);
     await page.click('#btnSave');
     await page.waitForTimeout(320);
   };
   await addTask('回复客户邮件', 'medium', '45');
   await addTask('低优先级归档', 'low', '60');
-  await addTask('提交投标文件（截止）', 'high', null, 'deadline');
+  await addTask('提交投标文件（截止）', 'high', null, '+1h');
   eq('共 4 个任务', await page.locator('.task').count(), 4);
 
-  /* ---------- 9. 排序：剩余时间（超时置顶 / 已完成沉底） ---------- */
+  /* ---------- 9. 排序：剩余时间（§4.5：有截止按距截止升序，无截止排最后，已完成沉底） ---------- */
   await page.click('#btnSort');
   await page.waitForTimeout(200);
   await page.click('#sortMenu [data-sort="deadline"]');
   await page.waitForTimeout(250);
   eq('排序标签', await page.locator('#sortLabel').textContent(), '排序：剩余时间');
-  const byDeadline = await page.locator('.task__title').allTextContents();
-  // 剩余时间升序：每张卡片的剩余量应单调不减
-  const remSeq = await page.locator('.task').evaluateAll(els => els.map(e => {
-    const txt = e.querySelector('.cd__time .cd__in').textContent.trim();
-    const p = txt.split(':').map(Number);
-    return p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p[0]*60+p[1];
-  }));
-  const sorted = remSeq.every((v,i) => i === 0 || remSeq[i-1] <= v);
-  truthy(`按剩余时间升序 (${remSeq.join(' ≤ ')})`, sorted);
-  eq('剩余最长的排末位', byDeadline[byDeadline.length-1], '低优先级归档');
+  const byDeadline = (await page.locator('.task__title').allTextContents()).map(s => s.trim());
+  truthy('唯一带截止的任务排最前', byDeadline[0].startsWith('提交投标文件'));
+  truthy('无截止任务排在带截止之后', byDeadline.indexOf('低优先级归档') > byDeadline.indexOf('提交投标文件（截止）'));
+  eq('按剩余时间排序结果', byDeadline.join(','), '提交投标文件（截止）,完成季度报告,回复客户邮件,低优先级归档');
 
   /* ---------- 10. 排序：优先级 ---------- */
   await page.click('#btnSort');
@@ -177,25 +192,20 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(250);
   const sHeads = await page.locator('.group-head__label').allTextContents();
   truthy('状态分组包含「计时中」', sHeads.includes('计时中'));
-  truthy('状态分组包含「未开始」', sHeads.includes('未开始'));
+  truthy('状态分组包含「待开始」', sHeads.includes('待开始'));
 
-  /* ---------- 13. 标记完成 ---------- */
+  /* ---------- 13. 标记完成（计时中可直接完成：先停表结算已用，再标记完成） ---------- */
   await page.click('#btnSort'); await page.waitForTimeout(150);
   await page.click('#sortMenu [data-group="none"]'); await page.waitForTimeout(250);
   const firstCard = page.locator('.task').filter({ hasText: '完成季度报告' }).first();
-  // 计时中的任务复选框禁用（语义：先停止再完成）—— 走溢出菜单重置为未开始
-  eq('计时中复选框不再禁用', await firstCard.locator('.check').isDisabled(), false);
-  await firstCard.locator('[data-act="more"]').click();
-  await page.waitForTimeout(250);
-  await page.click('#cardMenu [data-act="reset"]');
-  await page.waitForTimeout(300);
-  await firstCard.locator('[data-act="toggle-done"]').click();
+  eq('任意状态复选框均可用（不再禁用）', await firstCard.locator('.check').isDisabled(), false);
+  await firstCard.locator('.check').click();   // 计时中 → 完成（内部先停表结算）
   await page.waitForTimeout(300);
   truthy('已完成样式', await firstCard.evaluate(e => e.classList.contains('is-done')));
   eq('勾选框 aria-checked', await firstCard.locator('.check').getAttribute('aria-checked'), 'true');
   eq('状态文案', await firstCard.locator('.cd__label').textContent(), '已完成');
-  const doneStats = await page.locator('.stat').nth(2).locator('.stat__num').textContent();
-  truthy('统计已完成 +1', doneStats.startsWith('1'));
+  const doneStats = await page.locator('.stat').nth(3).locator('.stat__num').textContent();
+  truthy('统计已完成 +1', doneStats.trim() === '1');
 
   /* ---------- 14. 标签页筛选：已完成 ---------- */
   await page.click('#tabs [data-view="done"]', { force:true });
@@ -220,9 +230,8 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('预填标题', await page.inputValue('#inpTitle'), '回复客户邮件');
   eq('预填优先级', await page.locator('#segPriority [aria-pressed="true"]').getAttribute('data-pri'), 'medium');
   eq('预填时长 H', await page.inputValue('#inpH'), '0');
-  // 任务已运行约 10s，编辑时预填的是「当前剩余」（44:xx）而非原始 45:00，此处只校验在合理区间
-  const editM = parseInt(await page.inputValue('#inpM'), 10);
-  truthy(`预填时长 M 反映剩余时间 (${editM} 分)`, editM >= 43 && editM <= 45);
+  // 任务未开始（待开始），编辑预填的是完整预计时长 45 分（非「剩余」概念）
+  eq('预填时长 M = 完整预计 45', await page.inputValue('#inpM'), '45');
   await page.fill('#inpTitle', '回复客户邮件（已修改）');
   await page.click('#segPriority [data-pri="low"]');
   await page.click('#btnSave');
@@ -237,7 +246,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(220);
   await page.click('#cardMenu [data-act="reset"]');
   await page.waitForTimeout(300);
-  eq('重置后状态', await resetCard.locator('.cd__label').textContent(), '未开始');
+  eq('重置后状态', await resetCard.locator('.cd__label').textContent(), '待开始');
   // 60 分钟按 fmtDuration 规则显示为 h:mm:ss
   eq('重置后倒计时恢复满值', (await resetCard.locator('.cd__time .cd__in').textContent()).trim(), '1:00:00');
   truthy('重置后进度条归零', await resetCard.locator('.mini-progress > i').evaluate(e => { const m=/scaleX(([0-9.]+))/.exec(e.style.transform||''); return m ? parseFloat(m[1]) < 0.01 : true; }));
@@ -255,16 +264,17 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(350);
   eq('撤销后任务恢复', await page.locator('.task').count(), beforeDel);
 
-  /* ---------- 19. 截止时间模式 ---------- */
+  /* ---------- 19. 截止时间降为次要信息（根因验证：大字是工作计时，不再是距截止） ---------- */
   const ddlCard = page.locator('.task').filter({ hasText: '提交投标文件' }).first();
-  eq('截止模式状态文案', await ddlCard.locator('.cd__label').textContent(), '距截止');
-  truthy('截止时间 chip 存在', await ddlCard.locator('.chip').allTextContents().then(a => a.some(t => t.includes('截止'))));
-  const ddlTime = (await ddlCard.locator('.cd__time .cd__in').textContent()).trim();
-  // 1 小时以内 -> m:ss；超过 1 小时 -> h:mm:ss。两种都合法
-  truthy(`截止倒计时格式 "${ddlTime}"`, /^\d{1,2}:\d{2}(:\d{2})?$/.test(ddlTime));
-  await page.waitForTimeout(2200);
-  truthy('截止倒计时递减', (await ddlCard.locator('.cd__time .cd__in').textContent()).trim() !== ddlTime);
-  eq('截止模式不显示进度条', await ddlCard.locator('.mini-progress').count(), 0);
+  eq('带截止但待开始的状态文案', await ddlCard.locator('.cd__label').textContent(), '待开始');
+  eq('大字非距截止：未设预计=正计时 0', (await ddlCard.locator('.cd__time .cd__in').textContent()).trim(), '0');
+  truthy('「距截止」作为次要 chip 存在', await ddlCard.locator('.chip--due').allTextContents().then(a => a.some(t => t.includes('距截止'))));
+  eq('无预计时长不显示进度条', await ddlCard.locator('.mini-progress').count(), 0);
+  await ddlCard.locator('[data-act="toggle-timer"]').click();   // 开始正计时
+  await page.waitForTimeout(1600);
+  eq('开始后标签=已用时间', await ddlCard.locator('.cd__label').textContent(), '已用时间');
+  truthy('正计时大字递增', (await ddlCard.locator('.cd__time .cd__in').textContent()).trim() !== '0');
+  truthy('计时中「距截止」仍是次要信息', await ddlCard.locator('.chip--due').count() === 1);
 
   /* ---------- 20. 状态筛选（合并入筛选与排序菜单）：计时中 ---------- */
   await page.click('#btnSort');
@@ -284,11 +294,12 @@ function truthy(label, v){ eq(label, !!v, true); }
   }); });
   await page.waitForTimeout(500);
   await page.evaluate(() => {
+    // 到期只由「截止时间」派生：注入一个 1.2 秒后到达截止、且正在计时的任务
     const raw = JSON.parse(localStorage.getItem('taskflow.tasks.v1'));
     raw.tasks.push({
       id: 'test_expire', title: '会议提醒', desc: '', priority: 'medium', mode: 'duration',
-      durationMs: 1200, remainingMs: 1200, dueAt: null, status: 'running',
-      startedAt: Date.now(), alertAhead: 0, notify: true, firedAt: null, warned: false,
+      durationMs: 0, dueAt: Date.now() + 1200, status: 'running', segStart: Date.now(), accumulatedMs: 0,
+      alertAhead: 0, notify: true, firedAt: null, warned: false,
       createdAt: Date.now(), updatedAt: Date.now(), completedAt: null
     });
     localStorage.setItem('taskflow.tasks.v1', JSON.stringify(raw));
@@ -296,6 +307,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   const injected = await page.evaluate(() => JSON.parse(localStorage.getItem('taskflow.tasks.v1')).tasks.length);
   eq('注入成功（存储层）', injected, 5);
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(500);
   eq('注入的到期任务存在（渲染层）', await page.locator('.task').count(), 5);
   const expCard = page.locator('.task').filter({ hasText: '会议提醒' }).first();
@@ -310,26 +322,28 @@ function truthy(label, v){ eq(label, !!v, true); }
 
   /* ---------- 22. 离线期间到期的补发提醒 ---------- */
   await page.evaluate(() => {
-    // 模拟：任务在页面关闭期间已到期但未提醒
+    // 模拟：任务在页面关闭期间已过截止时间，但尚未提醒（firedAt 为空）
     const raw = JSON.parse(localStorage.getItem('taskflow.tasks.v1'));
     const t = raw.tasks.find(x => x.id === 'test_expire');
-    t.firedAt = null; t.status = 'running';
-    t.startedAt = Date.now() - 60000; t.remainingMs = 1000; t.warned = false;
+    t.dueAt = Date.now() - 5000;       // 截止已过去 → 离线期间到期
+    t.firedAt = null; t.warned = false;
+    t.status = 'running'; t.segStart = Date.now() - 60000; t.accumulatedMs = 0;
     localStorage.setItem('taskflow.tasks.v1', JSON.stringify(raw));
   });
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(1200);
   truthy('离线到期补发横幅', await page.locator('#alertBanner.show').isVisible());
   truthy('补发文案正确', (await page.locator('#abTitle').textContent()).includes('离线期间到期'));
 
   /* ---------- 23. 导出 / 导入 ---------- */
   const dl = page.waitForEvent('download', { timeout: 8000 }).catch(() => null);
-  await page.click('#nav [data-page="me"]');
+  await navTo(page, 'me');
   await page.waitForTimeout(320);
   await page.click('#btnExport');
   const download = await dl;
   truthy('导出触发下载', download && /taskflow-backup-.*\.json/.test(download.suggestedFilename()));
-  await page.click('#nav [data-page="tasks"]');
+  await navTo(page, 'tasks');
   await page.waitForTimeout(250);
 
   /* ---------- 24. 键盘快捷键 ---------- */
@@ -349,15 +363,17 @@ function truthy(label, v){ eq(label, !!v, true); }
   truthy('空标题不关闭弹窗', await page.locator('#dlgScrim.open').isVisible());
   truthy('标题字段标记错误', await page.locator('#fTitle.err').count() > 0);
 
-  /* ---------- 26. 校验：0 时长被拒绝 ---------- */
-  await page.fill('#inpTitle', '测试零时长');
+  /* ---------- 26. 校验：0 预计时长被接受（统一模型 = 正计时）---------- */
+  const beforeZero = await page.locator('.task').count();
+  await page.fill('#inpTitle', '测试正计时');
   await page.fill('#inpH', '0');
   await page.fill('#inpM', '0');
   await page.click('#btnSave');
   await page.waitForTimeout(320);
-  truthy('0 时长不关闭弹窗', await page.locator('#dlgScrim.open').isVisible());
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(250);
+  truthy('0 预计时长保存成功（弹窗关闭）', !(await page.locator('#dlgScrim').evaluate(e => e.classList.contains('open'))));
+  eq('新增一条正计时任务', await page.locator('.task').count(), beforeZero + 1);
+  const cfCard = page.locator('.task').filter({ hasText: '测试正计时' }).first();
+  truthy('正计时任务无进度条（未设预计）', await cfCard.locator('.mini-progress').count() === 0);
 
   /* ---------- 27. 无 JS 运行时错误 ---------- */
   eq('页面无 JS 报错', errors.length, 0);
@@ -385,7 +401,7 @@ function truthy(label, v){ eq(label, !!v, true); }
       font: getComputedStyle(document.body).fontFamily
     };
   });
-  eq('强调色令牌（静态靛蓝）', tokens.primary.toUpperCase(), '#355C9A');
+  eq('强调色令牌（静态粉色）', tokens.primary.toUpperCase(), '#FF3D8B');
   eq('纯白底令牌', tokens.bg.toUpperCase(), '#FFFFFF');
   truthy('FAB 圆角 (>=16px)', parseFloat(tokens.fabRadius) >= 16);
   eq('AppBar 高度 56px', tokens.appbarH, '56px');
@@ -400,8 +416,9 @@ function truthy(label, v){ eq(label, !!v, true); }
   for (const vw of [390, 412, 360]) {
     await page.setViewportSize({ width: vw, height: 900 });
     await page.waitForTimeout(250);
-    await page.evaluate(() => { localStorage.clear(); });
+    await page.evaluate(() => { localStorage.clear();localStorage.setItem('taskflow.welcome.v1', '1'); });
     await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
     await page.waitForTimeout(250);
     await page.click('#btnAdd');
     await page.waitForTimeout(350);
@@ -457,8 +474,9 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(200);
 
   /* ---------- 31. 截图 ---------- */
-  await page.evaluate(() => { localStorage.clear(); });
+  await page.evaluate(() => { localStorage.clear();localStorage.setItem('taskflow.welcome.v1', '1'); });
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(300);
   await page.evaluate(() => {
     const now = Date.now();
@@ -486,6 +504,7 @@ function truthy(label, v){ eq(label, !!v, true); }
     localStorage.setItem('taskflow.prefs.v1', JSON.stringify({ sort:'deadline', group:'none', view:'all', running:'all' }));
   });
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(__dirname, 'taskflow-preview.png'), fullPage: true });
   log.push('   截图: taskflow-preview.png');
@@ -510,7 +529,7 @@ function truthy(label, v){ eq(label, !!v, true); }
              pri: s.getPropertyValue('--accent').trim().toUpperCase() };
   });
   eq('深色模式底色', darkTok.surf, '#111317');
-  eq('深色模式强调色（浅靛蓝）', darkTok.pri, '#A9C1F5');
+  eq('深色模式强调色（浅粉）', darkTok.pri, '#FFB1CE');
   await page.emulateMedia({ colorScheme: 'light' });
   await page.waitForTimeout(200);
   eq('恢复浅色模式', await page.evaluate(() => document.documentElement.dataset.theme), 'light');
@@ -547,6 +566,7 @@ function truthy(label, v){ eq(label, !!v, true); }
     localStorage.setItem('taskflow.prefs.v1', JSON.stringify({ sort:'deadline', group:'none', view:'all', running:'all', theme:'light' }));
   });
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   await page.waitForTimeout(800);
   eq('种子任务数', await page.locator('.task').count(), 12);
   await page.click('#tabs [data-view="done"]', { force:true });
@@ -555,15 +575,15 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('互斥-空状态唯一', await page.locator('.empty').count(), 1);
   eq('互斥-筛选空态文案', await page.locator('.empty h3').textContent(), '没有符合筛选的任务');
   truthy('统计不受筛选影响（分母为全集）',
-    /^0$/.test((await page.locator('.stat').nth(2).locator('.stat__num').textContent()).replace(/\s+/g, ' ').trim()));
+    /^0$/.test((await page.locator('.stat').nth(3).locator('.stat__num').textContent()).replace(/\s+/g, ' ').trim()));
 
   /* 缺陷 A 回归：完成一条任务 -> 统计 1/12，已完成标签 1 项 */
   await page.click('#tabs [data-view="all"]', { force:true });
   await page.waitForTimeout(300);
-  await page.locator('.task').filter({ hasText: '种子任务1' }).first().locator('[data-act="toggle-done"]').click();
+  await page.locator('.task').filter({ hasText: '种子任务1' }).first().locator('.check').click();
   await page.waitForTimeout(400);
   eq('统计显示已完成 1',
-    (await page.locator('.stat').nth(2).locator('.stat__num').textContent()).replace(/\s+/g, ' ').trim(), '1');
+    (await page.locator('.stat').nth(3).locator('.stat__num').textContent()).replace(/\s+/g, ' ').trim(), '1');
   await page.click('#tabs [data-view="done"]', { force:true });
   await page.waitForTimeout(350);
   eq('已完成标签下列表数量与统计一致', await page.locator('.task').count(), 1);
@@ -572,15 +592,15 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(300);
 
   /* ---------- 34. 底部导航 / 触控区 / 指示块 / 菜单锚点 ---------- */
-  eq('底栏导航四项', await page.locator('#nav button').count(), 4);
-  eq('底栏含智能排程', await page.locator('#nav [data-page="schedule"]').count(), 1);
-  eq('右上角仅主题按钮', await page.locator('.appbar button').count(), 1);
-  eq('问号入口已移入我的', await page.locator('#nav [data-page="me"]').count(), 1);
-  await page.click('#nav [data-page="me"]');
+  eq('抽屉导航五项', await page.locator('#sidebar [data-page]').count(), 5);
+  eq('抽屉含智能编排', await page.locator('#sidebar [data-page="schedule"]').count(), 1);
+  eq('顶栏：菜单 + 主题两个按钮', await page.locator('.appbar button').count(), 2);
+  eq('设置入口位于抽屉', await page.locator('#sidebar [data-page="me"]').count(), 1);
+  await navTo(page, 'me');
   await page.waitForTimeout(300);
   truthy('我的页可见', await page.locator('#viewMe').isVisible());
   truthy('我的页含通知状态', (await page.locator('#notifyHint').textContent()).length > 0);
-  await page.click('#nav [data-page="tasks"]');
+  await navTo(page, 'tasks');
   await page.waitForTimeout(300);
 
   const geo = await page.evaluate(() => {
@@ -588,7 +608,7 @@ function truthy(label, v){ eq(label, !!v, true); }
     return {
       card: r('.task'), stats: r('.stats'), appbar: r('.appbar'),
       check: r('.task .check'), more: r('.task .more'), theme: r('#btnTheme'),
-      segBtn: r('#tabs button'), navBtn: r('#nav button'),
+      segBtn: r('#tabs button'), navBtn: r('#sidebar .sidebar__item'),
       trackL: Math.round(document.querySelector('.appbar').getBoundingClientRect().left),
       fab: r('.fab')
     };
@@ -666,7 +686,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   await page.waitForTimeout(350);
   // 31a. 1280 下侧栏可见、底部导航隐藏
   truthy('1280 宽：侧栏可见', await page.locator('#sidebar').isVisible());
-  truthy('1280 宽：底部导航隐藏', !(await page.locator('#nav').isVisible()));
+  truthy('1280 宽：菜单按钮隐藏', !(await page.locator('#btnDrawer').isVisible()));
   truthy('1280 宽：分段控件隐藏', !(await page.locator('#tabs').isVisible()));
   truthy('1280 宽：desktop-layout 生效',
     await page.evaluate(() => document.body.classList.contains('desktop-layout')));
@@ -719,8 +739,8 @@ function truthy(label, v){ eq(label, !!v, true); }
   // 31c. 390 宽：侧栏不可见，底部分段/导航可见（布局与改版前一致）
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(350);
-  truthy('390 宽：侧栏不可见', !(await page.locator('#sidebar').isVisible()));
-  truthy('390 宽：底部导航可见', await page.locator('#nav').isVisible());
+  truthy('390 宽：抽屉默认收起', !(await page.evaluate(() => document.body.classList.contains('drawer-open'))));
+  truthy('390 宽：顶栏菜单按钮可见', await page.locator('#btnDrawer').isVisible());
   truthy('390 宽：desktop-layout 未生效',
     !(await page.evaluate(() => document.body.classList.contains('desktop-layout'))));
 

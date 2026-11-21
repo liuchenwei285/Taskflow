@@ -18,9 +18,28 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8'
 };
 
+/* 本地开发代理：/functions/v1/app/* 转发到 dev/function-local.ts（127.0.0.1:8000），
+   保持路径与查询不变；上游未启动时返回 503 信封，静态资源行为完全不变。 */
+function proxyAi(req, res) {
+  const upstream = http.request({
+    hostname: '127.0.0.1', port: 8000,
+    path: req.url, method: req.method,
+    headers: { 'content-type': req.headers['content-type'] || 'application/json' }
+  }, ur => {
+    res.writeHead(ur.statusCode, { 'Content-Type': ur.headers['content-type'] || 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    ur.pipe(res);
+  });
+  upstream.on('error', () => {
+    res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ ok: false, error: { code: 'backend_unreachable', retryable: true } }));
+  });
+  req.pipe(upstream);
+}
+
 function start(port) {
   const server = http.createServer((req, res) => {
     let rel = decodeURIComponent(req.url.split('?')[0]);
+    if (rel.startsWith('/functions/v1/app')) { proxyAi(req, res); return; }
     if (rel === '/favicon.ico'){ res.writeHead(204); return res.end(); }
     if (rel === '/' || rel === '') rel = '/task-timer-app.html';
     const file = path.join(ROOT, path.normalize(rel).replace(/^[/\\]+/, ''));

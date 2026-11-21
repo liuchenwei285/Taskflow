@@ -3,7 +3,7 @@
    断言只读可观测事实（computed style、animation、DOM 结构、localStorage 形状），不依赖截图。 */
 const { chromium } = require('playwright');
 
-const URL = 'http://127.0.0.1:8899/';
+const URL = process.env.TASKFLOW_URL || 'http://127.0.0.1:8899/';
 let pass = 0, fail = 0;
 const log = [];
 function eq(label, got, want){
@@ -13,9 +13,22 @@ function eq(label, got, want){
 }
 function truthy(label, v){ eq(label, !!v, true); }
 
+async function navTo(p, name){
+  await p.evaluate((n) => { const b = document.querySelector('#sidebar [data-page="' + n + '"]'); if (b) b.click(); }, name);
+  await p.waitForTimeout(260);
+}
+
+
+/* 默认首屏为「智能编排」：本套件多数断言针对任务页 */
+async function goTasks(p){
+  await p.evaluate(() => { const b = document.querySelector('#sidebar [data-page="tasks"]'); if (b) b.click(); });
+  await p.waitForTimeout(260);
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const ctx = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 } });
+  await ctx.addInitScript(() => localStorage.setItem('taskflow.welcome.v1', '1'));  // 回访用户起步；首访弹窗见 e2e-welcome.js
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
@@ -23,6 +36,7 @@ function truthy(label, v){ eq(label, !!v, true); }
 
   await page.goto(URL, { waitUntil: 'load' });
   await page.waitForTimeout(200);
+  await goTasks(page);
 
   /* ---------- 1. 动效令牌 ---------- */
   const tokens = await page.evaluate(() => {
@@ -151,6 +165,7 @@ function truthy(label, v){ eq(label, !!v, true); }
 
   /* ---------- 5. 统计卡：首次淡入 / hover 上浮 / 重渲染不重播 / 数字仅变化时过渡 ---------- */
   await page.reload({ waitUntil: 'load' });
+  await goTasks(page);
   const statIntro = await page.evaluate(() => {
     const s = document.querySelector('.stat');
     return s ? getComputedStyle(s).animationName : 'none';
@@ -244,15 +259,27 @@ function truthy(label, v){ eq(label, !!v, true); }
   });
   eq('连续点击只创建一条', dup, 1);
 
-  /* ---------- 7b. 点「计时」小卡片：整列不重播入场动画（避免整列闪光） ---------- */
+  /* 让「动效验收任务」进入计时中：§7b 验证的是「计时筛选下列表不重播入场」，
+     必须有真正处于计时中的卡片可显示，而不是依赖筛选被重置成「不限」的旧 bug。 */
+  await page.evaluate(() => {
+    const c = Array.from(document.querySelectorAll('.task'))
+      .find(x => x.querySelector('.task__title').textContent === '动效验收任务');
+    const b = c && c.querySelector('[data-act="toggle-timer"]'); if (b) b.click();
+  });
+  await page.waitForTimeout(300);
+
+  /* ---------- 7b. 点「计时」小卡片：已显示的卡片不重播入场（整列不闪光） ---------- */
+  const runningOpacity = () => page.evaluate(() => {
+    const c = Array.from(document.querySelectorAll('.task'))
+      .find(x => x.querySelector('.task__title').textContent === '动效验收任务');
+    return c ? getComputedStyle(c).opacity : 'MISSING';
+  });
   await page.click('.stat[data-stat="running"]');
   await page.waitForTimeout(70);
-  const noFlash = await page.evaluate(() => Array.from(document.querySelectorAll('.task')).map(t => getComputedStyle(t).opacity));
-  truthy('切到「计时」后整列不再重播入场', noFlash.length > 0 && noFlash.every(o => o === '1'));
+  truthy('切到「计时」后整列不再重播入场', (await runningOpacity()) === '1');
   await page.click('.stat[data-stat="running"]');       // 取消筛选
   await page.waitForTimeout(70);
-  const noFlash2 = await page.evaluate(() => Array.from(document.querySelectorAll('.task')).map(t => getComputedStyle(t).opacity));
-  truthy('取消「计时」后整列不再重播入场', noFlash2.length > 0 && noFlash2.every(o => o === '1'));
+  truthy('取消「计时」后整列不再重播入场', (await runningOpacity()) === '1');
 
   /* ---------- 8. 倒计时逐位滚动 ---------- */
   const pickCard = `(() => {
@@ -260,6 +287,8 @@ function truthy(label, v){ eq(label, !!v, true); }
       .find(c => c.querySelector('.task__title').textContent === '动效验收任务');
     return card;
   })()`;
+  await page.evaluate(`(() => { const c = ${pickCard}; if (c && !c.classList.contains('st-running')) { const b = c.querySelector('[data-act="toggle-timer"]'); if (b) b.click(); } })()`);
+  await page.waitForTimeout(250);   // 确保处于计时中（§7b 前已启动则不重复切换，避免误暂停）
   const cd0 = await page.evaluate(`(() => {
     const card = ${pickCard};
     const el = card.querySelector('.cd__time');
@@ -326,7 +355,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   eq('读屏文本与显示一致', rollInfo.sr.replace(/\s+/g, ''), rollInfo.after.replace(/\s+/g, ''));
 
   /* ---------- 9. 页面切换 ---------- */
-  await page.click('#nav [data-page="stats"]');
+  await navTo(page, 'stats');
   await page.waitForTimeout(60);
   const viewIn = await page.evaluate(() => {
     const v = document.querySelector('#viewStats');
@@ -341,7 +370,7 @@ function truthy(label, v){ eq(label, !!v, true); }
     const a = document.querySelector('#viewStats').getAnimations()[0];
     return a ? a.startTime : null;
   });
-  await page.click('#nav [data-page="stats"]');
+  await navTo(page, 'stats');
   await page.waitForTimeout(90);
   const startAfter = await page.evaluate(() => {
     const a = document.querySelector('#viewStats').getAnimations()[0];
@@ -349,7 +378,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   });
   eq('同页重复点击不重播', startAfter, startBefore);
 
-  await page.click('#nav [data-page="tasks"]');
+  await navTo(page, 'tasks');
   await page.waitForTimeout(90);
   const backIn = await page.evaluate(() => document.querySelector('#viewTasks').classList.contains('view--in'));
   truthy('真实切页重新触发', backIn);
@@ -394,10 +423,10 @@ function truthy(label, v){ eq(label, !!v, true); }
     };
   });
   eq('存储顶层键未变', store.keys.join(','), 'savedAt,schemaVersion,sessions,tasks,v');
-  truthy('任务字段未变（含 durationMs/remainingMs/startedAt/firedAt）',
-    ['durationMs','remainingMs','startedAt','firedAt','alertAhead','notify','mode','priority']
+  truthy('任务字段含统一计时模型（accumulatedMs 取代 remainingMs 作计时真值）',
+    ['durationMs','accumulatedMs','startedAt','firedAt','alertAhead','notify','mode','priority']
       .every(k => store.taskKeys.indexOf(k) >= 0));
-  eq('品牌主色未变', store.primary, '#355C9A');
+  eq('品牌主色为粉色', store.primary, '#FF3D8B');
   truthy('自定义主题色控件仍在', store.accentPicker);
 
   /* 自定义强调色（用户粉色）仍能生效 */
@@ -421,6 +450,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   await wide.setViewportSize({ width: 1280, height: 800 });
   await wide.goto(URL, { waitUntil: 'load' });
   await wide.waitForTimeout(600);
+  await goTasks(wide);
   await wide.hover('.stat');
   await wide.waitForTimeout(280);
   const iconScale = await wide.evaluate(() => {
@@ -432,7 +462,7 @@ function truthy(label, v){ eq(label, !!v, true); }
   truthy('宽屏统计卡图标 hover 放大 1.06', iconScale !== null && Math.abs(iconScale - 1.06) < 0.02);
 
   /* 宽屏：空壳顶栏不吸顶，滚动时不再压出一条空白遮挡带（统计页内容足够高，可真实滚动） */
-  await wide.locator('button[data-page="stats"] >> visible=true').first().click();
+  await navTo(wide, 'stats');
   await wide.waitForTimeout(350);
   const wideScroll = await wide.evaluate(async () => {
     const sh = document.getElementById('appShell');
@@ -467,9 +497,11 @@ function truthy(label, v){ eq(label, !!v, true); }
 
   /* ---------- 13. 减少动态效果 ---------- */
   const ctx2 = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  await ctx2.addInitScript(() => localStorage.setItem('taskflow.welcome.v1', '1'));  // 回访用户起步；首访弹窗见 e2e-welcome.js
   const p2 = await ctx2.newPage();
   await p2.goto(URL, { waitUntil: 'load' });
   await p2.waitForTimeout(500);
+  await goTasks(p2);
   /* 建一个任务，才有倒计时可观察 */
   await p2.click('#btnAdd');
   await p2.waitForTimeout(420);
@@ -477,9 +509,17 @@ function truthy(label, v){ eq(label, !!v, true); }
   await p2.click('#panelDuration [data-preset="5"]');
   await p2.click('#btnSave');
   await p2.waitForTimeout(700);
+  await p2.evaluate(() => {
+    const c = Array.from(document.querySelectorAll('.task'))
+      .find(x => x.querySelector('.task__title').textContent === '减少动态效果验证');
+    const b = c && c.querySelector('[data-act="toggle-timer"]'); if (b) b.click();   // 启动后才走表
+  });
+  await p2.waitForTimeout(250);
   const rm = await p2.evaluate(async () => {
     const mq = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const el = document.querySelector('.cd__time');
+    const card = Array.from(document.querySelectorAll('.task'))
+      .find(x => x.querySelector('.task__title').textContent === '减少动态效果验证');
+    const el = card && card.querySelector('.cd__time');
     if (!el) return { mq: mq, noCd: true };
     const before = el.querySelector('.cd__in').textContent;
     await new Promise(r => setTimeout(r, 1500));

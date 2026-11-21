@@ -7,7 +7,12 @@
  * 用法：node e2e-i18n.js            （需先起静态服务器，npm test 会自动起）
  * ============================================================= */
 const { chromium } = require('playwright');
-const URL = 'http://127.0.0.1:8899/';
+
+async function navTo(p, name){
+  await p.evaluate((n) => { const b = document.querySelector('#sidebar [data-page="' + n + '"]'); if (b) b.click(); }, name);
+  await p.waitForTimeout(260);
+}
+const URL = process.env.TASKFLOW_URL || 'http://127.0.0.1:8899/';
 
 let pass = 0, fail = 0;
 const log = [];
@@ -33,16 +38,17 @@ const CJK_SCAN = () => {
   /* ---------- 1. 系统中文 → 默认中文 ---------- */
   {
     const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: 'zh-CN' });
+    await ctx.addInitScript(() => localStorage.setItem('taskflow.welcome.v1', '1'));  // 回访用户起步；首访弹窗见 e2e-welcome.js
     const p = await ctx.newPage();
     const errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(URL, { waitUntil: 'load' });
     await p.waitForTimeout(700);
     eq('zh-CN 系统：html lang', await p.getAttribute('html', 'lang'), 'zh-CN');
-    eq('zh-CN 系统：标题', await p.title(), 'Taskflow · 任务倒计时管理');
+    eq('zh-CN 系统：标题', await p.title(), 'Taskflow · AI 出卷与任务规划');
     ok('zh-CN 系统：导航为中文',
-      (await p.textContent('#nav button[data-page="tasks"]')).trim() === '任务');
-    await p.click('#nav button[data-page="me"]');
+      (await p.textContent('#sidebar [data-page="tasks"] span')).trim() === '任务');
+    await navTo(p, 'me');
     await p.waitForTimeout(400);
     ok('语言控件存在', await p.locator('#langSeg').count() === 1);
 
@@ -50,11 +56,11 @@ const CJK_SCAN = () => {
     await p.click('#langSeg button[data-lang="en"]');
     await p.waitForTimeout(650);
     eq('切换后 html lang', await p.getAttribute('html', 'lang'), 'en');
-    eq('切换后标题', await p.title(), 'Taskflow · Countdown Task Manager');
-    eq('导航 Tasks', (await p.textContent('#nav button[data-page="tasks"]')).trim(), 'Tasks');
-    eq('导航 Stats', (await p.textContent('#nav button[data-page="stats"]')).trim(), 'Stats');
-    eq('导航 Settings', (await p.textContent('#nav button[data-page="me"]')).trim(), 'Settings');
-    eq('页标题 Me', (await p.textContent('#viewMe .view__title')).trim(), 'Me');
+    eq('切换后标题', await p.title(), 'Taskflow · AI Papers & Planning');
+    eq('导航 Tasks', (await p.textContent('#sidebar [data-page="tasks"] span')).trim(), 'Tasks');
+    eq('导航 Stats', (await p.textContent('#sidebar [data-page="stats"] span')).trim(), 'Stats');
+    eq('导航 Settings', (await p.getAttribute('#sidebar [data-page="me"]', 'aria-label')).trim(), 'Settings');
+    eq('页标题 Settings', (await p.textContent('#viewMe .view__title')).trim(), 'Settings');
 
     const scan = await p.evaluate(CJK_SCAN);
     ok('英文模式无中文文本残留', scan.text.length === 0, scan.text.slice(0, 6).join('|'));
@@ -63,9 +69,9 @@ const CJK_SCAN = () => {
 
     /* ---------- 3. 其余页面同样无残留 ---------- */
     const pages = [
-      ['tasks', async () => { await p.click('#nav button[data-page="tasks"]'); }],
-      ['stats', async () => { await p.click('#nav button[data-page="stats"]'); }],
-      ['editor', async () => { await p.click('#nav button[data-page="tasks"]'); await p.waitForTimeout(250); await p.click('#btnAdd'); }],
+      ['tasks', async () => { await navTo(p, 'tasks'); }],
+      ['stats', async () => { await navTo(p, 'stats'); }],
+      ['editor', async () => { await navTo(p, 'tasks'); await p.waitForTimeout(250); await p.click('#btnAdd'); }],
     ];
     for (const [name, go] of pages) {
       await go();
@@ -83,12 +89,12 @@ const CJK_SCAN = () => {
     eq('刷新后仍为英文', await p.getAttribute('html', 'lang'), 'en');
 
     /* ---------- 5. 切回中文 ---------- */
-    await p.click('#nav button[data-page="me"]');
+    await navTo(p, 'me');
     await p.waitForTimeout(350);
     await p.click('#langSeg button[data-lang="zh"]');
     await p.waitForTimeout(650);
     eq('切回中文 html lang', await p.getAttribute('html', 'lang'), 'zh-CN');
-    eq('切回中文导航', (await p.textContent('#nav button[data-page="tasks"]')).trim(), '任务');
+    eq('切回中文导航', (await p.textContent('#sidebar [data-page="tasks"] span')).trim(), '任务');
 
     /* ---------- 6. 英文下无横向溢出 ---------- */
     await p.click('#langSeg button[data-lang="en"]');
@@ -104,11 +110,12 @@ const CJK_SCAN = () => {
   /* ---------- 7. 系统英文 → 默认英文 ---------- */
   {
     const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, locale: 'en-US' });
+    await ctx.addInitScript(() => localStorage.setItem('taskflow.welcome.v1', '1'));  // 回访用户起步；首访弹窗见 e2e-welcome.js
     const p = await ctx.newPage();
     await p.goto(URL, { waitUntil: 'load' });
     await p.waitForTimeout(700);
     eq('en-US 系统：默认英文', await p.getAttribute('html', 'lang'), 'en');
-    eq('en-US 系统：导航 Tasks', (await p.textContent('#nav button[data-page="tasks"]')).trim(), 'Tasks');
+    eq('en-US 系统：导航 Tasks', (await p.textContent('#sidebar [data-page="tasks"] span')).trim(), 'Tasks');
     await ctx.close();
   }
 
