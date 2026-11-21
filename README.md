@@ -6,7 +6,7 @@
 **同一份单文件应用，跑在浏览器、Windows 独立 exe 和 Android WebView 壳里，三份逐字节一致。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-competition%202026-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
+[![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
 [![Single file](https://img.shields.io/badge/frontend-single%20HTML-2ea44f.svg)](task-timer-app.html)
 [![Offline](https://img.shields.io/badge/offline-first-2ea44f.svg)](#-不配-ai-也能用)
 
@@ -265,7 +265,7 @@ Taskflow/
 │  ├─ app/taskflow.html       # 内嵌 HTML 源（与根目录一致）
 │  └─ dev-verify.js           # 真实窗口 CDP 验收
 ├─ android/                   # Android WebView 壳 + 构建脚本 + 图标源
-├─ submission/                # 比赛交卷帖与演示截图
+├─ submission/                # 论坛发布帖与演示截图
 ├─ docs/                      # README 素材
 └─ tools/                     # 静态服务器 / 一键测试 / 素材采集
 ```

@@ -6,7 +6,7 @@
 **The same single-file app runs in the browser, as a standalone Windows exe, and inside an Android WebView shell — all byte-identical.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-competition%202026-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
+[![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
 [![Single file](https://img.shields.io/badge/frontend-single%20HTML-2ea44f.svg)](task-timer-app.html)
 [![Offline](https://img.shields.io/badge/offline-first-2ea44f.svg)](#works-without-ai)
 
@@ -266,7 +266,7 @@ Taskflow/
 │  ├─ app/taskflow.html       # embedded HTML source (identical to root)
 │  └─ dev-verify.js           # real-window CDP acceptance
 ├─ android/                   # WebView shell + build script + icon source
-├─ submission/                # contest post and demo screenshots
+├─ submission/                # forum post and demo screenshots
 ├─ docs/                      # README assets
 └─ tools/                     # static server / test runner / asset capture
 ```
@@ -277,7 +277,7 @@ Taskflow/
 
 - **No CDN, works offline**: KaTeX and html2canvas are inlined into the single file; weak classroom networks, intranets, and offline local copies all render and export normally.
 - **Why the exe is not committed**: a 60MB+ binary would permanently bloat git history, so build outputs are ignored and releases go to GitHub Releases.
-- **AI needs your own key**: the browser talks directly to your configured endpoint and the key stays local; the built-in relay is not enabled in the public contest environment. All local features work without AI.
+- **AI needs your own key**: the browser talks directly to your configured endpoint and the key stays local; the built-in relay is not enabled in the public deployment. All local features work without AI.
 - **Notification small icon reuses the colorful launcher icon**: Android renders it as a monochrome silhouette, so only the shape shows in the status bar; fixing needs a dedicated `ic_stat_notify`.
 - **Web theme animation depends on the View Transitions API**: unsupported browsers / WebViews switch instantly without animation, never stuck mid-transition.
 - **Windows**: file export goes through the system save dialog and system-level notifications were not tested end-to-end under WebView2; in-page reminders and the timer path are verified.
