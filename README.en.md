@@ -1,20 +1,20 @@
 <div align="center">
 
-# Taskflow · Countdown Task Manager
+# Taskflow · Turn a set of notes into a timed exam and daily tasks
 
-**A fully offline Android countdown task manager: a single-file web app plus a 1,013-line native shell.**
-**Its signature is the theme-switch animation — a circular reveal expanding from the toggle, implemented twice (web and native).**
+**A study workbench built around one loop: notes → exam → timed tasks.**
+**The same single-file app runs in the browser, as a standalone Windows exe, and inside an Android WebView shell — all byte-identical.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
-[![Platform: Android](https://img.shields.io/badge/platform-Android%20minSdk24%20%2F%20targetSdk34-3DDC84.svg)](https://developer.android.com/)
-![Version](https://img.shields.io/badge/version-2.7.0-5558.svg)
-![No network permission](https://img.shields.io/badge/network-permission-none-2ea44f.svg)
+[![Version](https://img.shields.io/badge/version-competition%202026-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
+[![Single file](https://img.shields.io/badge/frontend-single%20HTML-2ea44f.svg)](task-timer-app.html)
+[![Offline](https://img.shields.io/badge/offline-first-2ea44f.svg)](#works-without-ai)
 
-**English** · [简体中文](README.md)
+[简体中文](README.md) · **English**
 
-<img src="docs/app-light.png" width="240" alt="Light theme"> <img src="docs/app-dark.png" width="240" alt="Dark theme"> <img src="docs/stats.png" width="240" alt="Statistics">
+<img src="submission/img/post-02-studio.png" width="46%" alt="Study studio"> <img src="submission/img/post-05-tasks.png" width="46%" alt="Task page">
 
-[⬇️ Download APK](https://github.com/liuchenwei285/Taskflow/releases) · [Quick start](#quick-start) · [How it works](#-how-it-works)
+[⬇️ Windows exe](https://github.com/liuchenwei285/Taskflow/releases/tag/v2.6.1-windows) · [⬇️ Android APK](https://github.com/liuchenwei285/Taskflow/releases) · [🌐 Live demo](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) · [Quick start](#quick-start)
 
 </div>
 
@@ -22,469 +22,271 @@
 
 ## What it is
 
-Taskflow is a **countdown task manager**: give a task a duration or a deadline, start it, and it counts down
-in real time and reminds you when time is up. Every completed focus block is recorded and aggregated into
-statistics.
+Most timers manage *time*. What students usually lack is not time, but *what to do with it*. Taskflow closes that gap:
 
-| Feature | Detail |
-|---|---|
-| 🕐 Three timing modes | Fixed duration `duration` / deadline `deadline` / Pomodoro `pomodoro` |
-| 🎚️ Sliding segmented filter | Drag the thumb between "All / Active / Done" with velocity projection and spring snapping |
-| 🌗 Circular-reveal theme switch | See [The theme-switch animation](#-the-theme-switch-animation) |
-| 🌐 Chinese / English UI | Switch in **Me → Language**; defaults to the system language, choice is remembered |
-| 📊 Focus statistics | Daily aggregation; sessions crossing midnight are split across both days |
-| 💾 Local storage | Everything lives in on-device `localStorage`; JSON backup import / export |
-| 🔕 Due reminders | Native notification channel (Android) + standard Notification API (browser) |
-| 🪶 Offline | **No network permission requested**; no network calls anywhere in the build |
-| 🧱 Build-free front end | The entire UI is **one 4,178-line HTML file** — no framework, no bundler, no CDN |
+> Upload notes → parse locally → AI writes questions → estimate time → confirm to create tasks → start the countdown → export the exam → save to the library
+
+The whole chain happens in one chat box — no page hops, no forms. An exam is not the end: it carries an estimate like "37 min" and becomes a real startable / pausable / completable countdown task. **Question generation and execution live in one loop.**
+
+| Form | Entry | Notes |
+|---|---|---|
+| 🌐 Online | [Qoder Sites](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) | No login, no install, works on phone and desktop |
+| 🪟 Windows | [v2.6.1-windows release](https://github.com/liuchenwei285/Taskflow/releases/tag/v2.6.1-windows) | Single-file exe, HTML and icon embedded, no companion files |
+| 🤖 Android | [Releases](https://github.com/liuchenwei285/Taskflow/releases) | WebView shell with native notifications and theme animation, minSdk 24 |
+| 📄 Local file | Open `task-timer-app.html` | Zero-dependency single file, works offline |
 
 ---
 
-## ✨ The theme-switch animation
+## Study studio: notes → exam → tasks
 
-This is the part that received the most attention: **the colour swap happens in a single frame at the start of
-the transition, and the animation does nothing but reveal the new theme.**
+The core of this version. Say one sentence in the first-screen input and AI turns notes into an executable plan:
 
-<img src="docs/theme-switch-sequence.png" width="100%" alt="Theme switch broken down frame by frame: a circle expands from the toggle to reveal the dark theme">
+- **Make an exam**: upload a `.txt` / `.md` note, say "make a 5-question quiz from these notes". Get a mixed paper (multiple choice / fill-in / true-false / calculation / proof) with live KaTeX rendering and per-question time estimates.
+- **Break down tasks**: say "plan tonight's homework" and AI produces an **editable draft** — nothing is written until you confirm. **No write request is sent before confirmation.**
+- **Local parsing**: upload, SHA-256 content-fingerprint dedup, sectioning and preview all run in the browser; only the "generate questions" step needs AI.
 
-<p align="center">
-  <img src="docs/theme-switch.gif" width="300" alt="Theme-switch animation: a circle expanding from the toggle reveals the dark theme">
-</p>
-<p align="center"><sub>Recorded on a headless Chromium at 412×915 · <a href="docs/theme-switch.webm">download the webm</a></sub></p>
+<img src="submission/img/post-04-paper.png" width="100%" alt="Exam card: five question types + KaTeX + estimates + export">
 
-### Design principle: reveal, don't cross-fade
+Finished exams go to the library with **five real exports — PDF / PNG / Markdown / JSON / CSV**, none requiring AI; deleting an exam never deletes the tasks it created.
 
-Most theme switches cross-fade the old screen out and the new one in. A cross-fade leaves the entire screen
-in a semi-transparent overlap for its whole duration — on an interface with frosted glass
-(`backdrop-filter`) that overlap smears into a single blurred mess.
+<img src="submission/img/post-08-library.png" width="100%" alt="Exam library and five exports">
 
-Taskflow splits the transition into two separate things:
+### AI is an accelerator, not the engine
 
-1. **Swap colours in one frame** — the old layer is frozen into a static snapshot, the new layer is already
-   the final render.
-2. **Clip only the new layer to a circle** — `clip-path: circle(0 → R)`, centred on the theme toggle, so the
-   circle pushes the old theme outwards.
+**With no model API key configured, all of the following really work — not demo placeholders:**
 
-The result: the area inside the circle is always the finished render. Nothing re-colours after the reveal,
-nothing flashes, no translucent ghosting.
+- Manual creation and full lifecycle: priority, task / pomodoro dual modes, estimated duration and deadline set together; five local states (idle / running / paused / done / overdue), pauses don't count toward elapsed time, refresh keeps progress.
+- Reminders and early alerts: per-task 1 / 5 / 10-minute warnings, due sound + system notification; even with permission denied an in-page alert still fires; overdue tasks can be postponed or edited.
+- Organize and review: search (including IME composition path), sort, group, status filter; the stats page weekly bars and yearly heatmap come from real focus records.
+- Data and experience: one-click backup export / import (auto-backup before import); dark / light themes, custom accent color, Chinese / English, reduced motion, 320px narrow screens.
 
-### Web implementation: View Transitions API
-
-```js
-// Centre = the toggle's centre in viewport coordinates;
-// radius = distance to the farthest corner (recomputed each time, never cached)
-const R = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 2;
-
-// Write the centre before the transition mounts, so the new layer is
-// already clipped on its very first frame and never flashes full-screen
-root.style.setProperty('--vt-cx', cx + 'px');
-root.style.setProperty('--vt-cy', cy + 'px');
-
-const vt = document.startViewTransition(function(){
-  root.classList.add('theme-switching');   // freeze every transition/animation
-  paintTheme(next);                        // swap colours once
-});
-
-vt.ready.then(function(){
-  root.animate(
-    { clipPath: ['circle(0px at ' + cx + 'px ' + cy + 'px)',
-                 'circle(' + R + 'px at ' + cx + 'px ' + cy + 'px)'] },
-    { duration: 500,
-      easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
-      fill: 'both',
-      pseudoElement: '::view-transition-new(root)' });
-});
-```
-
-Matching CSS turns the default cross-fade off entirely and keeps only the clip:
-
-```css
-::view-transition-group(root){ animation:none }
-::view-transition-old(root){ z-index:1; animation:none; mix-blend-mode:normal }
-::view-transition-new(root){ z-index:2; animation:none; mix-blend-mode:normal;
-  clip-path:circle(0px at var(--vt-cx, 50%) var(--vt-cy, 50%)) }
-```
-
-### Why the frosted glass must be flattened during the transition
-
-Both bottom pills use `backdrop-filter: blur(20px) saturate(160%)`. During the transition two snapshot layers
-coexist, and the glass samples **the layer underneath it** — so a smeared, colour-polluted blob shows up on
-the new layer.
-
-The fix is to swap to a solid colour for the duration and let CSS restore the glass afterwards:
-
-```css
-html.theme-switching .pill{
-  -webkit-backdrop-filter:none!important;
-  backdrop-filter:none!important;
-  background:var(--pill-solid)!important;
-  background-image:none!important;
-  box-shadow:none!important;
-}
-html.theme-switching .seg__ind{
-  backdrop-filter:none!important; background:var(--thumb-solid)!important;
-}
-```
-
-The same `html.theme-switching` class also disables every `transition` / `animation` (pseudo-elements
-included), guaranteeing that the area inside the circle is a static final frame.
-
-### Native implementation: snapshot overlay with an inverted hole
-
-Inside the APK, View Transitions behaviour depends on the WebView version, so the native side carries an
-equivalent implementation using the same easing and the same 500 ms duration:
-
-```java
-captureWindow(new Runnable() {          // 1. capture the current window
-    @Override public void run() {
-        showOverlayAndAnimate(cxFrac, cyFrac, dark);
-    }
-});
-
-// RevealOverlayView draws the snapshot and punches an even-odd path hole over decorView
-overlay.setSnapshot(snapshot);
-((ViewGroup) decor).addView(overlay, MATCH_PARENT, MATCH_PARENT);
-
-// 2. apply the theme underneath the overlay in one shot (no Activity recreation, no layout pass)
-applyThemeInstant(dark);
-
-// 3. start the animation on the next frame, once the new theme has painted
-ValueAnimator.ofFloat(0f, maxR)                       // maxR = farthest corner + 8dp
-    .setInterpolator(new PathInterpolator(0.32f, 0.72f, 0f, 1f))
-```
-
-The hole expands from **the toggle's centre**, matching the web version visually.
-
-### Fallback chain
-
-If any link in the chain is unavailable, the app falls back to an instant switch. It never stops halfway:
-
-| Condition | Behaviour |
-|---|---|
-| System animations disabled (`animator_duration_scale = 0`) | Native `applyThemeInstant`; web branch checks `animScale === 0` |
-| View Transitions unsupported | Instant switch |
-| `prefers-reduced-motion: reduce` | Instant switch |
-| Native snapshot capture failed | Instant switch, no leftover ghost |
-| Transition interrupted (`cancel`) | Idempotent `endThemeSwitch()` cleanup |
-
-### Where the theme comes from
-
-- **Follow the system**: reacts to `prefers-color-scheme` changes (default).
-- **Material You** (Android 12+): wallpaper-derived colours are pushed from the native side via
-  `getThemeTokens()` and applied on the web side through `window.__onThemeTokens(payload)`.
-- **No first-paint flash**: an inline script in `<head>` resolves `data-theme` from
-  `prefers-color-scheme` before the stylesheet is parsed.
+To use AI, put your own model endpoint under "Settings → AI service" (OpenAI / Anthropic-compatible). The key stays in browser-local storage and requests go straight from the browser to your endpoint — **no task data is uploaded and no key lives on a frontend server**. API errors show nine actionable messages with short error codes and limited retries instead of a blank screen.
 
 ---
 
-## 🌐 Interface language (中文 / English)
+## Two countdowns, one state machine
 
-<img src="docs/lang-switch.png" width="100%" alt="Chinese and English interface side by side">
+The most confusing semantic pair is now split cleanly:
 
-- **Entry point**: a two-segment control under **Me → Language**. The change applies immediately, is written to
-  `prefs.lang`, and is reused on the next launch.
-- **Follows the system by default**: if the first entry of `navigator.languages` starts with `zh`, the UI is
-  Chinese; otherwise English. Either can be locked manually.
-- **How it works**: static copy is switched by walking DOM text nodes and caching the Chinese original
-  (gettext-style `msgid`); dynamically rendered copy goes through `T()` / `Tn()`. The dictionary has 212 entries
-  and falls back to Chinese when a translation is missing, so nothing ever renders blank.
-- **Localised formatting**: countdown units (`3d 04:05:06` vs `3天`), relative time (`in 5m` vs `5分钟后`),
-  absolute time (`Nov 16 09:30` vs `11月16日 09:30`) and counts (`4 items` vs `4 项`) all follow the active language.
-- **Zero-residue guarantee**: `e2e-i18n.js` scans the visible text plus `aria-label` / `placeholder` / `title`
-  in English mode and fails on any Chinese character (the 「中文」 button label itself is exempt).
+- **Estimated duration**: the work timer that runs only after you press start; a pause freezes it.
+- **Deadline**: wall-clock time; it goes overdue on time whether or not you started.
 
----
+Task cards move through five states: idle → running ⇄ paused → done / overdue. The rules are asserted in tests: pauses don't count, refresh keeps progress, overdue auto-pauses while preserving elapsed time, and done tasks are never checked for overdue.
 
-## 🧭 How it works
+<img src="submission/img/post-05-tasks.png" width="100%" alt="Task page: four-state stats + overdue handling + live countdown">
 
-### Three layers
-
-```
-┌─ android/ ────────────────────────────────────────────────┐
-│  MainActivity.java   (745)  WebView shell + theme reveal    │
-│  Notifications.java  (88)   native notification channel     │
-│  RevealOverlayView   (80)   snapshot overlay, inverted hole │
-│  Exporter.java       (100)  backup export via SAF           │
-│  assets/index.html          synced from the repository root │
-└────────────────────────────────────────────────────────────┘
-┌─ web ─────────────────────────────────────────────────────┐
-│  task-timer-app.html (4178)  single file: all UI + logic    │
-│  · theme / tokens / animation   · tasks / timing / pomodoro │
-│  · segmented control + spring   · stats aggregation         │
-│  · localStorage persistence     · frame-time sampling       │
-└────────────────────────────────────────────────────────────┘
-```
-
-The native shell does only four things: **load local assets, expose `AndroidBridge`, play the theme
-animation, post notifications**. Everything else lives in the web layer, so virtually every UI issue is
-debuggable with browser DevTools alone.
-
-### Startup sequence
-
-```
-MainActivity.onCreate
-  └─ new WebView → setJavaScriptEnabled / setDomStorageEnabled
-     └─ addJavascriptInterface(new Bridge(), "AndroidBridge")
-        └─ loadUrl("file:///android_asset/index.html")
-           └─ inline <head> script: resolve data-theme (no first-paint flash)
-              └─ read localStorage → hydrate tasks → first render → start the 250ms heartbeat
-```
-
-### Countdown model: timestamps, not accumulation
-
-The countdown **never accumulates via `setInterval`** — accumulation drifts whenever the screen sleeps, the
-app is backgrounded, or the process is killed. Instead it stores the start instant:
+Timing **stores timestamps, not accumulated values** — no drift across screen-off, background, or process kill:
 
 ```js
 function remainingOf(t){
   if (t.status === 'running' && t.startedAt){
     const base = (t._baseRemaining != null) ? t._baseRemaining : t.remainingMs;
-    return base - (now() - t.startedAt);   // recomputed from wall-clock time every time
+    return base - (now() - t.startedAt);   // recomputed from real time each call
   }
   return t.remainingMs != null ? t.remainingMs : t.durationMs;
 }
 ```
 
-- **Pause**: freeze the current remainder into `remainingMs` and clear `startedAt`.
-- **Process death / page reload**: `startedAt` is persisted, so the remainder picks up where it left off.
-- **Pomodoro**: `phaseAt(t, now)` determines the current phase, its progress and its remainder.
-- **Deadline mode**: pure `dueAt - now`, no accumulation.
-- UI heartbeat every 250 ms; persistence is throttled (once per 20 s while a task is running).
+---
 
-### Focus sessions and statistics
+## ✨ Theme switch animation
 
-Each completed focus block becomes one session:
+Colors are swapped once in the first frame of the transition; the animation only "reveals" the new theme. This is the most carefully crafted part of the project.
+
+<img src="docs/theme-switch-sequence.png" width="100%" alt="Theme switch frame breakdown: a circle expands from the button center, revealing dark mode">
+
+<p align="center">
+  <img src="docs/theme-switch.gif" width="300" alt="Theme switch: circular reveal from the button center">
+</p>
+
+**Reveal, don't fade**: most theme switches cross-fade old and new screens, which turns into a blurry mess on interfaces with frosted glass (`backdrop-filter`). Taskflow splits the transition in two: swap colors in one frame (old layer frozen as a snapshot, new layer already final), then clip only the new layer with `clip-path: circle(0 → R)` centered on the theme button. Inside the circle is always the finished frame — no double recolor, no translucent ghosting.
 
 ```js
-sessions.push({
-  id, taskId, taskTitle, kind: 'focus'|'short'|'long',
-  startAt, endAt, ms, dateKey: 'YYYY-MM-DD'
+const R = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 2;
+root.style.setProperty('--vt-cx', cx + 'px');
+root.style.setProperty('--vt-cy', cy + 'px');
+const vt = document.startViewTransition(function(){
+  root.classList.add('theme-switching');   // freeze all transitions/animations
+  paintTheme(next);                        // swap colors once
+});
+vt.ready.then(function(){
+  root.animate(
+    { clipPath: ['circle(0px at ' + cx + 'px ' + cy + 'px)',
+                 'circle(' + R + 'px at ' + cx + 'px ' + cy + 'px)'] },
+    { duration: 500, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'both',
+      pseudoElement: '::view-transition-new(root)' });
 });
 ```
 
-`pushSessions()` splits any block that **crosses midnight** into two records, one per day (with an iteration
-cap so it can never loop forever). Without this, one late-night session would corrupt both "today" and
-"last 7 days". The statistics page then aggregates by `dateKey` into the bar chart, completion rate and
-priority breakdown.
+During the transition frosted glass is flattened (`html.theme-switching .pill { backdrop-filter:none }`) so the new layer can't sample the old snapshot. The fallback chain is complete: system animations off, no View Transitions support, `prefers-reduced-motion`, failed native capture, or an interrupted transition all fall back to a plain instant switch.
 
-### Storage and backups
+The Android shell has an equivalent native implementation: capture the window → snapshot mask with reverse hole-punch → swap theme under the mask → expand a `ValueAnimator` from the button center, sharing the same easing and 500ms duration.
 
-```js
-const STORAGE_KEY = 'taskflow.tasks.v1';   // tasks + sessions
-const PREFS_KEY   = 'taskflow.prefs.v1';   // sort / group / view / theme
-const BACKUP_KEY  = 'taskflow.backup.v1';  // automatic snapshot
-const SCHEMA_VERSION = 2;
-```
+---
 
-- Writes are preceded by a **snapshot pass** that strips runtime-only fields (`_baseRemaining` etc.), so the
-  on-disk payload stays readable and migratable.
-- Reads are validated against `SCHEMA_VERSION`; a backup from a newer schema fails loudly instead of being
-  silently truncated.
-- Export produces `taskflow-backup-YYYYMMDD-HHMM.json`; inside the APK it goes through
-  `AndroidBridge.saveFile()` (SAF), in a browser it degrades to a Blob download.
-- Import validates `app === 'taskflow'`, `schemaVersion` and per-task field integrity before merging.
-- A `storage` listener replaces in-memory state when another tab or an external tool modifies the data.
+## 🌐 Language and theme
 
-### Notifications
+- **Chinese / English**: 582 synchronized entries; "Me → Language" switches instantly and persists, defaulting to system language. An E2E test scans the English UI for zero Chinese residue.
+- **Dark / light + custom accent**: both themes share one layout and motion system; changing the accent recolors everything. An inline `<head>` script sets `data-theme` before styles parse, so there's no white flash.
+- **Material You** (Android 12+): the native side derives a palette from the wallpaper and pushes it to the page via `window.__onThemeTokens()`.
 
-A WebView offers no `Notification` API, so the app goes through the native bridge:
+<img src="docs/lang-switch.png" width="100%" alt="Chinese and English UI comparison">
+
+---
+
+## 🧭 Architecture: one codebase, three forms
 
 ```
-web sendSystemNotification()
-  └─ AndroidBridge.requestNotificationPermission()   // POST_NOTIFICATIONS
-     └─ Notifications.show() → NotificationChannel("taskflow_due", IMPORTANCE_HIGH)
-        └─ setSmallIcon(R.mipmap.ic_launcher) + BigTextStyle + vibration waveform
+┌─ task-timer-app.html (10395 lines) ────────────────────────┐
+│  Single file: all UI + logic, no framework/build/CDN        │
+│  · Study studio: upload/parse / SHA-256 dedup / AI chat      │
+│  · Task engine: five-state machine / timestamp timing /      │
+│    pomodoro / early alerts                                   │
+│  · Exam library: PDF·PNG·MD·JSON·CSV export                 │
+│  · Theme / motion / tokens · stats · backup import/export    │
+│  · localStorage persistence · 582 i18n entries               │
+└──────────────────────────────────────────────────────────────┘
+   ↑ byte-synced            ↑ embedded resource        ↑ embedded resource
+┌──────────────┐  ┌──────────────────────┐  ┌────────────────────┐
+│ web / Sites  │  │ windows/ WinForms    │  │ android/ WebView   │
+│ static host  │  │ + WebView2 shell     │  │ native notify/theme│
+└──────────────┘  └──────────────────────┘  └────────────────────┘
 ```
 
-In a browser preview the same code degrades to the standard `Notification` API with identical permission
-handling.
+- **Windows**: `windows/` is a WinForms + WebView2 shell. The HTML and rounded icon are compiled into `Taskflow.exe` as `EmbeddedResource`, released to `%LOCALAPPDATA%\Taskflow\app\` at startup, and loaded through a `taskflow.app` virtual host — so the exe can be copied alone, no companion files, with a stable origin for localStorage.
+- **Android**: the native shell does only four things — load local assets, expose `AndroidBridge`, play the theme animation, send notifications. Everything else is in the web layer, so UI issues can be debugged in browser DevTools.
+- **Four HTML copies** (root / `site/` / `android/app/src/main/assets/` / `windows/app/`) are md5-locked identical.
 
-### The bottom dock and the sliding segmented control
+### Focus records and stats
 
-The two bottom pills (segmented filter + tab bar) are fixed frosted glass:
+Every completed focus writes `{taskId, kind, startAt, endAt, ms, dateKey}`; segments crossing midnight are split so each day gets its own share. The stats page aggregates by `dateKey` into weekly bars, completion rate, priority distribution and a yearly heatmap.
 
-```css
-.pill{
-  position:fixed; left:var(--dock-inset); right:var(--dock-inset); z-index:45;
-  background:var(--lg-underlay), var(--lg-tint);
-  border:1px solid var(--lg-border);
-  backdrop-filter:blur(20px) saturate(160%);
-  box-shadow:inset 0 1px 0 var(--lg-inner), var(--lg-shadow);
-}
-```
+### Storage and backup
 
-Several non-obvious pitfalls are handled in code:
-
-- **Content must not sit under the pills**: `.app-shell` is its own scroll container whose bottom edge
-  fades out through a `mask-image` gradient, and `padding-bottom = pill height + gap + safe-area + 24px`,
-  so the last row stays fully visible and tappable.
-- **The dock is inset 4dp relative to content**: 24dp vs the cards' 20dp, preserving the same 4dp delta on
-  narrow screens (≤360dp).
-- **Touch dragging**: `pointerdown` calls `setPointerCapture` immediately, events are delegated to the
-  **track** rather than the thumb, `touch-action: pan-y` applies to both, and
-  `pointerup / cancel / lostpointercapture` share one teardown path. (Touch browsers apply implicit pointer
-  capture on the pressed `button`; without this layer the drag "lets go" halfway through.)
-- **Snapping**: the drag carries velocity projection, the thumb snaps to a legal segment on release, and the
-  filter is **only committed after the snap** — so results never flicker mid-drag.
-- **Visibility guarantee**: an idle watchdog checks thumb size and opacity and resets it if anything looks
-  wrong — the fix for the earlier "thumb disappears after dragging" bug.
-
-### Performance guard and automatic downgrade
-
-Frame times are sampled with `requestAnimationFrame` during drags and scrolls, and the app steps down when
-they exceed budget:
-
-| Tier | Behaviour |
-|---|---|
-| Normal | `blur(20px) saturate(160%)` frosted glass |
-| `perf-lite` | blur reduced to `blur(12px) saturate(120%)` |
-| `no-glass` | solid panels (`#F1F3F7` / `#262A31`), `backdrop-filter` fully off |
-
-Downgrades also respect user preferences: `prefers-reduced-transparency: reduce`, system animations off, and
-the Firefox / WebKit compatibility paths all land on solid colours. Measured on drag and scroll: p50 ≈ 5.6 ms,
-p95 ≈ 5.7 ms, `>8ms` share 0% — no downgrade triggered.
-
-> The `lg*` prefix in the code is a leftover from the earlier liquid-glass (refraction) design. It now stands
-> for "liquid glass" as a name only: the refraction engine, SVG displacement filters, displacement maps,
-> `ResizeObserver` rebuilds and filter lifecycle management were all removed when the material reverted to
-> frosted glass.
+Tasks / sessions / prefs are stored under separate `localStorage` keys, with runtime-only fields stripped before writing and `SCHEMA_VERSION` checked on read. Export produces `taskflow-backup-YYYYMMDD-HHMM.json` (SAF on Android, Blob download in browser); import validates the structure and auto-backs-up current data first.
 
 ---
 
 ## Quick start
 
-### Browser preview
+### Windows standalone (easiest)
+
+Download `Taskflow-Windows-v2.6.1.zip` from the [v2.6.1-windows release](https://github.com/liuchenwei285/Taskflow/releases/tag/v2.6.1-windows) and **double-click `Taskflow.exe`**. Requires Windows 10/11 (Edge includes the WebView2 Runtime; a clear prompt appears if missing). All local features work without an AI key.
+
+### Online / browser
+
+Open the [live demo](https://taskflow-app-3qo4c3iuyvd.qoder.zone/), or serve locally:
 
 ```bash
 git clone https://github.com/liuchenwei285/Taskflow.git
 cd Taskflow
-npx serve .          # or any static server
+npx serve .
 # open http://localhost:3000/task-timer-app.html
 ```
 
-> Opening the file over `file://` mostly works too, but some browsers restrict `localStorage` there — an
-> http origin is recommended.
+> Double-clicking `file://` also works, but some browsers restrict `localStorage`; http is recommended.
 
-### Install the APK
+### Android
 
-Download `taskflow-v2.6.1.apk` from [Releases](https://github.com/liuchenwei285/Taskflow/releases) and
-install on Android 7.0 (API 24) or newer.
+Download the APK from [Releases](https://github.com/liuchenwei285/Taskflow/releases) and install on Android 7.0 (API 24)+.
 
 ---
 
-## Building the APK
+## Build
 
-There is **no Gradle**. A single script runs `aapt2 → javac → d8 → zipalign → apksigner`:
+### Windows exe
+
+Requires .NET 8 SDK + Windows Desktop Runtime; the WebView2 NuGet package is restored automatically:
+
+```bash
+cd windows
+python make-rounded-icon.py        # optional: regenerate rounded icon source
+python make-ico.py                 # optional: build multi-size ico
+dotnet publish -c Release -r win-x64 --self-contained true \
+  -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None \
+  -o dist/Taskflow-Windows
+# output: dist/Taskflow-Windows/Taskflow.exe (single file, ~64MB)
+```
+
+After editing root `task-timer-app.html`, sync it to `windows/app/taskflow.html` before building (both must be byte-identical).
+
+### Android APK
+
+No Gradle — one script runs `aapt2 → javac → d8 → zipalign → apksigner`:
 
 ```bash
 cd android
-# requires Android SDK build-tools 34.0.0 and JDK 17 (paths are set in the script)
 bash build-apk.sh
 # output: dist/taskflow-v2.6.1.apk
 ```
 
-Notes:
-
-- **The signing key is not in the repository** (`android/keystore/` is git-ignored). The script generates a
-  throwaway debug keystore on first run; replace it for real releases.
-- `android/app/src/main/assets/index.html` is the copy shipped inside the APK. After editing the root
-  `task-timer-app.html`, sync it over — the two must stay byte-identical.
-- Icons are generated from SVG into 5 densities by `android/icon-source/generate-icons.js`;
-  `verify-apk-icons.js` then validates the packaged resources pixel by pixel.
+The signing keystore is not in the repo (`android/keystore/` is ignored); the script generates a debug keystore on first run.
 
 ---
 
 ## Tests
 
 ```bash
-npm install                 # playwright (devDependency)
+npm install
 npx playwright install chromium
-npm test                    # starts a static server and runs all three suites
+npm test                    # starts a static server and runs all suites
 ```
 
-`npm test` binds a static server on `127.0.0.1:8899` (or reuses an existing one) and then runs the suites in
-order. You can also run them individually:
+Or individually:
 
 ```bash
-node tools/serve.js &        # start the server manually
-node test-taskflow.js        # pure logic
-node e2e-taskflow.js         # browser E2E
-node e2e-notify.js           # notifications
+node test-taskflow.js       # pure logic
+node e2e-taskflow.js        # full task flow
+node e2e-study.js           # study studio / AI question generation
+node e2e-conversation.js    # multi-turn chat and context
+node e2e-ai.js              # AI state machine (success/failure/retry/library/render)
+node e2e-welcome.js         # 71 assertions: welcome dialog never touches task data
+node e2e-motion.js          # motion and custom-accent red lines
+node e2e-i18n.js            # zero Chinese residue in English mode
 ```
 
-| Suite | Size | Coverage |
-|---|---|---|
-| `test-taskflow.js` | 103 assertions | Pure logic: timing, Pomodoro phases, sort/group, storage, backup validation |
-| `e2e-taskflow.js` | 157 assertions | Browser E2E: full task flow, filters, drag-snap, theme switch, import/export |
-| `e2e-notify.js` | 18 assertions | Notifications and permissions: permission branches, reminder firing, vibration |
-| `e2e-i18n.js` | 23 assertions | Language: system default, manual switch, persistence, zero Chinese residue in English mode, no overflow at 360px |
-
-All suites run in headless Chromium; `e2e-taskflow.js` additionally covers the Firefox and WebKit fallback
-paths.
+12 Playwright E2E suites + 1 logic regression, covering the generation chain, five-state timing, both notification paths, wide/narrow screens and Firefox / WebKit fallbacks. The Windows shell also has `windows/dev-verify.js`, which runs 8 acceptance checks in a real window over WebView2 CDP (first launch, create task, live countdown, persistence after reload).
 
 ---
 
-## Project layout
+## Project structure
 
 ```
 Taskflow/
-├─ task-timer-app.html      # single-file web app (4178 lines: all UI + logic)
-├─ test-taskflow.js         # logic regression
-├─ e2e-taskflow.js          # browser E2E
-├─ e2e-notify.js            # notification regression
-├─ e2e-i18n.js              # language (Chinese / English) acceptance
-├─ package.json
-├─ android/
-│  ├─ app/src/main/
-│  │  ├─ java/com/taskflow/app/   # native shell (MainActivity / Notifications / RevealOverlayView / Exporter)
-│  │  ├─ res/                     # themes, colours, 5-density icons
-│  │  └─ assets/index.html        # synced with the root task-timer-app.html
-│  ├─ build-apk.sh            # Gradle-free build + signing
-│  ├─ inject_apk.py
-│  └─ icon-source/            # icon SVG, generation and verification scripts
-├─ docs/                     # README assets (screenshots, animation breakdown, recording)
-├─ tools/                    # static server, one-command test runner, doc capture
-└─ .gitignore
+├─ task-timer-app.html        # single-file web app (10395 lines)
+├─ site/index.html            # Sites static copy (identical to root)
+├─ functions/                 # optional AI server-side proxy
+├─ vendor/                    # inlined KaTeX / html2canvas for offline use
+├─ i18n/en.json               # 582 English entries
+├─ e2e-*.js / test-taskflow.js# 12 E2E suites + logic regression
+├─ windows/                   # single-file Windows shell (WebView2)
+│  ├─ Program.cs / Taskflow.csproj / app.manifest
+│  ├─ icon-source-rounded-512.png / make-rounded-icon.py / make-ico.py
+│  ├─ app/taskflow.html       # embedded HTML source (identical to root)
+│  └─ dev-verify.js           # real-window CDP acceptance
+├─ android/                   # WebView shell + build script + icon source
+├─ submission/                # contest post and demo screenshots
+├─ docs/                      # README assets
+└─ tools/                     # static server / test runner / asset capture
 ```
 
 ---
 
-## Design decisions & known limitations
+## Design trade-offs and known limits
 
-- **Why no web framework**: the whole app is one HTML file you can open by double-clicking. No build step —
-  edit a line, refresh, done. For a single-device tool like this, the framework's overhead outweighs its
-  benefits.
-- **Why liquid glass (refraction) was abandoned**: refraction required SVG displacement filters, displacement
-  maps and `ResizeObserver` rebuilds, which measurably dropped frames on mid-range devices, and the edge
-  dispersion hurt text legibility. It was reverted to stable frosting at
-  `blur(20px) saturate(160%)`, which measures better (filters 4 → 0, DOM nodes 417 → 315).
-- **The notification small icon reuses the colour launcher icon**: Android renders small icons as a
-  monochrome silhouette, so the status bar only shows the shape. Fixing this needs a dedicated
-  `ic_stat_notify` asset.
-- **No adaptive icon**: adding `mipmap-anydpi-v26` would make `R.mipmap.ic_launcher` resolve to an
-  `AdaptiveIconDrawable` on API 26+, which `setSmallIcon()` rejects — a notification regression.
-- **White icon background** has a weak edge against a pure-white wallpaper. Adding a light outline to the
-  source SVG and regenerating is enough if you want more definition.
+- **No CDN, works offline**: KaTeX and html2canvas are inlined into the single file; weak classroom networks, intranets, and offline local copies all render and export normally.
+- **Why the exe is not committed**: a 60MB+ binary would permanently bloat git history, so build outputs are ignored and releases go to GitHub Releases.
+- **AI needs your own key**: the browser talks directly to your configured endpoint and the key stays local; the built-in relay is not enabled in the public contest environment. All local features work without AI.
+- **Notification small icon reuses the colorful launcher icon**: Android renders it as a monochrome silhouette, so only the shape shows in the status bar; fixing needs a dedicated `ic_stat_notify`.
+- **Web theme animation depends on the View Transitions API**: unsupported browsers / WebViews switch instantly without animation, never stuck mid-transition.
+- **Windows**: file export goes through the system save dialog and system-level notifications were not tested end-to-end under WebView2; in-page reminders and the timer path are verified.
 
 ---
 
 ## Contributing
 
-Issues and PRs are welcome. Please label issues so they can be triaged:
-
-| Label | Purpose |
-|---|---|
-| `bug` | Behaviour that contradicts expectations |
-| `ui` / `animation` / `glassmorphism` | Layout / motion and transitions / frosted-glass material |
-| `performance` | Frame time, memory, startup |
-| `android` / `web` | Affects only the Android shell / only the web side |
-| `enhancement` | Feature request |
-| `refactor` | Internal change with no external behaviour change |
-| `documentation` | README, comments or examples |
-| `accessibility` | A11y and keyboard operation |
-| `question` | Usage questions and discussion |
-
-`good first issue` and `help wanted` mark tasks suitable for newcomers.
+Issues and PRs are welcome. Please label issues: `bug` / `ui` / `animation` / `enhancement` / `web` / `android` / `documentation`, etc.
 
 ---
 
@@ -492,5 +294,4 @@ Issues and PRs are welcome. Please label issues so they can be triaged:
 
 [MIT](LICENSE) © Alfred Liu
 
-The icon is generated from [taskflow-icon-B-pink-hot.svg](android/icon-source/taskflow-icon-B-pink-hot.svg).
-Code snippets above are lightly simplified for readability; the source itself is commented in Chinese.
+Icon generated from [taskflow-icon-B-pink-hot.svg](android/icon-source/taskflow-icon-B-pink-hot.svg); the Windows rounded variant is derived from that design by `windows/make-rounded-icon.py`.
