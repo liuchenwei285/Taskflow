@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- ============================================================
-         Taskflow 调色板 · 浅色（纯白底 · 微冷灰 + 靛蓝强调）
-         全站唯一强调色相：primary（静态靛蓝 / API31+ 壁纸取色）。
-         禁止黄绿、棕、黄、橙；分层靠 1dp outline + surfaceVariant 填充。
+         Taskflow 调色板 · 浅色（纯白底 · 微冷灰 + 粉色强调）
+         全站唯一强调色相：primary（静态粉色 / API31+ 壁纸取色）。
          ============================================================ -->
     <color name="tf_bg">#FFFFFF</color>
     <color name="tf_surface">#FFFFFF</color>
@@ -14,12 +13,12 @@
     <color name="tf_outline_strong">#7A808A</color>
 
     <!-- 静态回退强调色（仅本文件与 values-night 允许出现具体色值） -->
-    <color name="tf_accent">#355C9A</color>
+    <color name="tf_accent">#FF3D8B</color>
     <color name="tf_on_accent">#FFFFFF</color>
-    <color name="tf_accent_strong">#355C9A</color>
-    <color name="tf_primary_container">#D9E3F8</color>
-    <color name="tf_on_primary_container">#0B1B3A</color>
-    <color name="tf_accent_soft">#1F355C9A</color>
+    <color name="tf_accent_strong">#D81B74</color>
+    <color name="tf_primary_container">#FFD9E8</color>
+    <color name="tf_on_primary_container">#4A0A24</color>
+    <color name="tf_accent_soft">#1FFF3D8B</color>
 
     <color name="tf_error">#B3261E</color>
     <color name="tf_error_container">#FCE4E1</color>
