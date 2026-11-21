@@ -42,7 +42,7 @@ Both share the same web app core, but the shell, layout and theme-animation impl
 | | 🖥️ Desktop (online / Windows exe / local file) | 📱 Android APK |
 |---|---|---|
 | Layout | Wide-screen (≥900px) left sidebar: study studio / tasks / stats / exam library / me, plus "New conversation" and chat history | Narrow mobile layout with bottom pill nav, no desktop sidebar |
-| Theme animation | **Browser View Transitions**: `clip-path` circular reveal from the button (`startViewTransition`) | **Native snapshot mask**: `RevealOverlayView` screen capture with reverse hole-punch + `ValueAnimator` radius expansion, 500ms, same easing — **this native animation exists only in the APK** |
+| Theme animation | CSS color transition only, **no circular animation** | **Native snapshot mask**: `RevealOverlayView` screen capture with reverse hole-punch + `ValueAnimator` radius expansion, 500ms — **the circular reveal exists only in the APK** |
 | Theme / accent color | Settings has a custom accent picker; changing it recolors everything (including the sidebar "New conversation" button) | Picker hidden; uses Material You instead — native derives a wallpaper palette and pushes it via `AndroidBridge.getThemeTokens()` |
 | Notifications | Standard `Notification` API; in-page alert still fires if permission is denied | Native notification channel `Notifications` + vibration via `AndroidBridge` |
 | File export | Browser Blob download (PDF / PNG / MD / JSON / CSV) | SAF via `AndroidBridge.saveFile()` |
@@ -104,38 +104,43 @@ function remainingOf(t){
 
 ---
 
-## ✨ Theme switch animation
+## ✨ Theme switching: the circular reveal exists only in the APK
 
-Colors are swapped once in the first frame of the transition; the animation only "reveals" the new theme. This is the most carefully crafted part of the project.
+**The circular reveal transition is exclusive to the Android APK.** The desktop editions (online / Windows exe / local file) have no such animation — this is also stated in [The desktop edition and the Android edition are used differently](#the-desktop-edition-and-the-android-edition-are-used-differently).
 
-<img src="docs/theme-switch-sequence.png" width="100%" alt="Theme switch frame breakdown: a circle expands from the button center, revealing dark mode">
+### Android APK: native snapshot mask + reverse hole-punch
+
+<img src="docs/theme-switch-sequence.png" width="100%" alt="APK theme switch frame breakdown: a circle expands from the button center, revealing dark mode">
 
 <p align="center">
-  <img src="docs/theme-switch.gif" width="300" alt="Theme switch: circular reveal from the button center">
+  <img src="docs/theme-switch.gif" width="300" alt="APK native theme switch: circular reveal from the button center">
 </p>
 
-**Reveal, don't fade**: most theme switches cross-fade old and new screens, which turns into a blurry mess on interfaces with frosted glass (`backdrop-filter`). Taskflow splits the transition in two: swap colors in one frame (old layer frozen as a snapshot, new layer already final), then clip only the new layer with `clip-path: circle(0 → R)` centered on the theme button. Inside the circle is always the finished frame — no double recolor, no translucent ghosting.
+In the APK, WebView transitions depend on the WebView version, so the animation is implemented natively: capture the current window → `RevealOverlayView` punches a reverse hole through a full-screen `Path` (even-odd) → swap the theme under the mask without recreating the Activity or triggering layout → on the next frame run `ValueAnimator.ofFloat(0, maxR)` with `PathInterpolator(0.32, 0.72, 0, 1)` for 500ms, expanding the circle from the theme button's center.
 
-```js
-const R = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 2;
-root.style.setProperty('--vt-cx', cx + 'px');
-root.style.setProperty('--vt-cy', cy + 'px');
-const vt = document.startViewTransition(function(){
-  root.classList.add('theme-switching');   // freeze all transitions/animations
-  paintTheme(next);                        // swap colors once
+```java
+captureWindow(new Runnable() {          // 1. capture the current window
+    @Override public void run() {
+        showOverlayAndAnimate(cxFrac, cyFrac, dark);
+    }
 });
-vt.ready.then(function(){
-  root.animate(
-    { clipPath: ['circle(0px at ' + cx + 'px ' + cy + 'px)',
-                 'circle(' + R + 'px at ' + cx + 'px ' + cy + 'px)'] },
-    { duration: 500, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'both',
-      pseudoElement: '::view-transition-new(root)' });
-});
+
+overlay.setSnapshot(snapshot);          // 2. snapshot mask with reverse hole-punch
+((ViewGroup) decor).addView(overlay, MATCH_PARENT, MATCH_PARENT);
+applyThemeInstant(dark);                // 3. swap theme once, under the mask
+
+ValueAnimator.ofFloat(0f, maxR)         // 4. start on the next frame, maxR = farthest corner + 8dp
+    .setInterpolator(new PathInterpolator(0.32f, 0.72f, 0f, 1f))
+    .setDuration(500);
 ```
 
-During the transition frosted glass is flattened (`html.theme-switching .pill { backdrop-filter:none }`) so the new layer can't sample the old snapshot. The fallback chain is complete: system animations off, no View Transitions support, `prefers-reduced-motion`, failed native capture, or an interrupted transition all fall back to a plain instant switch.
+**Reveal, don't fade**: most theme switches cross-fade old and new screens, which turns into a blurry mess on interfaces with frosted glass (`backdrop-filter`). The snapshot mask splits the transition in two: swap colors in one frame (old layer frozen as a snapshot, new layer already final), then let a circle push the old theme away from the button. Inside the circle is always the finished frame — no double recolor, no translucent ghosting.
 
-The View Transitions implementation above applies **only to the desktop edition (online / Windows / local file)**. The Android APK uses a **different animation that only it has**: capture the window → `RevealOverlayView` snapshot mask with reverse hole-punch → swap theme under the mask → expand a `ValueAnimator` from the button center. Same easing and 500ms duration as desktop, but a completely different mechanism (native View animation, not a browser API).
+The fallback chain is complete: system animations off (`animator_duration_scale = 0`), failed native capture, or an interrupted transition all fall back to a plain instant switch, with idempotent cleanup and no leftover artifacts.
+
+### Desktop edition: color transition only, no circular animation
+
+The desktop edition uses pure CSS: `toggleTheme()` only changes `data-theme`, and each element's own `background` / `color` transition smooths the change — no snapshot layer, no clipping, no `startViewTransition`. An inline `<head>` script sets `data-theme` from `prefers-color-scheme` / saved preference before styles parse, so there's no white flash.
 
 ---
 
@@ -294,7 +299,7 @@ Taskflow/
 - **Why the exe is not committed**: a 60MB+ binary would permanently bloat git history, so build outputs are ignored and releases go to GitHub Releases.
 - **AI needs your own key**: the browser talks directly to your configured endpoint and the key stays local; the built-in relay is not enabled in the public deployment. All local features work without AI.
 - **Notification small icon reuses the colorful launcher icon**: Android renders it as a monochrome silhouette, so only the shape shows in the status bar; fixing needs a dedicated `ic_stat_notify`.
-- **Web theme animation depends on the View Transitions API**: unsupported browsers / WebViews switch instantly without animation, never stuck mid-transition.
+- **The circular reveal exists only in the APK** via native snapshot mask; the desktop edition (browser / Windows) only has a CSS color transition, with no circular animation.
 - **Windows**: file export goes through the system save dialog and system-level notifications were not tested end-to-end under WebView2; in-page reminders and the timer path are verified.
 
 ---

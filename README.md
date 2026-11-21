@@ -42,7 +42,7 @@
 | | 🖥️ 桌面版（在线 / Windows exe / 本地文件） | 📱 Android APK |
 |---|---|---|
 | 布局 | 宽屏（≥900px）有左侧栏：学习工作台 / 任务 / 统计 / 试卷库 / 我的，还有"新会话"与历史会话 | 窄屏移动布局，底部胶囊导航，没有桌面侧栏 |
-| 主题切换动画 | **浏览器 View Transitions**：`clip-path` 圆形从按钮中心揭开（`startViewTransition`） | **原生快照遮罩**：`RevealOverlayView` 截屏反向挖洞 + `ValueAnimator` 半径扩张，500ms 同一缓动——**这套原生动画只有 APK 有** |
+| 主题切换动画 | 只有 CSS 颜色过渡，**不播圆形动画** | **原生快照遮罩**：`RevealOverlayView` 截屏反向挖洞 + `ValueAnimator` 半径扩张，500ms——**圆形揭示动画只有 APK 有** |
 | 主题色 / 强调色 | 设置页有自定义强调色选择器，改一处全站跟随（含侧栏"新会话"按钮） | 控件隐藏，改走 Material You：原生从壁纸取色、经 `AndroidBridge.getThemeTokens()` 下发 |
 | 通知 | 标准 `Notification` API，权限被拒仍有页面内提醒 | 原生通知通道 `Notifications` + 震动，经 `AndroidBridge` |
 | 文件导出 | 浏览器 Blob 下载（PDF / PNG / MD / JSON / CSV） | SAF `AndroidBridge.saveFile()` |
@@ -104,38 +104,43 @@ function remainingOf(t){
 
 ---
 
-## ✨ UI 主题切换动画
+## ✨ 主题切换：只有 APK 才有圆形揭示动画
 
-换色在转场开始的一帧内一次性完成，动画只负责"揭开"新主题——这是本项目最花心思的地方。
+**圆形揭示转场是 Android APK 独有的**，桌面版（在线 / Windows exe / 本地文件）没有这个动画——这一点在 [桌面版和 Android 版用法不同](#桌面版和-android-版用法不同) 里也写明了。
 
-<img src="docs/theme-switch-sequence.png" width="100%" alt="主题切换动画逐帧分解：圆形从按钮中心扩散揭开深色主题">
+### Android APK：原生快照遮罩 + 反向挖洞
+
+<img src="docs/theme-switch-sequence.png" width="100%" alt="APK 主题切换动画逐帧分解：圆形从按钮中心扩散揭开深色主题">
 
 <p align="center">
-  <img src="docs/theme-switch.gif" width="300" alt="主题切换动画：圆形从按钮中心扩散揭开深色主题">
+  <img src="docs/theme-switch.gif" width="300" alt="APK 原生主题切换：圆形从按钮中心扩散揭开深色主题">
 </p>
 
-**揭开，而不是淡化**：绝大多数主题切换用"旧画面淡出 + 新画面淡入"，但在有磨砂玻璃（`backdrop-filter`）的界面上会糊成一片。Taskflow 把转场拆成两件事：一帧内换色（旧层定格快照、新层已是最终画面），只对新层做 `clip-path: circle(0 → R)` 裁剪，圆心是主题按钮。圆内永远是已完成的最终画面，不会二次变色或闪半透明重影。
+APK 里 WebView 的转场受版本影响，所以走了原生实现——截当前窗口 → `RevealOverlayView` 用 `Path` even-odd 反向挖洞铺满 `decorView` → 遮罩之下一次性切主题（不重建 Activity、不触发布局）→ 下一帧起 `ValueAnimator.ofFloat(0, maxR)`，`PathInterpolator(0.32, 0.72, 0, 1)`、500ms，圆从主题按钮圆心向外扩张，和桌面版观感一致。
 
-```js
-const R = Math.hypot(Math.max(cx, vw - cx), Math.max(cy, vh - cy)) + 2;
-root.style.setProperty('--vt-cx', cx + 'px');
-root.style.setProperty('--vt-cy', cy + 'px');
-const vt = document.startViewTransition(function(){
-  root.classList.add('theme-switching');   // 冻结所有过渡/动画
-  paintTheme(next);                        // 一次性换色
+```java
+captureWindow(new Runnable() {          // 1. 截当前窗口
+    @Override public void run() {
+        showOverlayAndAnimate(cxFrac, cyFrac, dark);
+    }
 });
-vt.ready.then(function(){
-  root.animate(
-    { clipPath: ['circle(0px at ' + cx + 'px ' + cy + 'px)',
-                 'circle(' + R + 'px at ' + cx + 'px ' + cy + 'px)'] },
-    { duration: 500, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'both',
-      pseudoElement: '::view-transition-new(root)' });
-});
+
+overlay.setSnapshot(snapshot);          // 2. 快照遮罩反向挖洞
+((ViewGroup) decor).addView(overlay, MATCH_PARENT, MATCH_PARENT);
+applyThemeInstant(dark);                // 3. 遮罩之下一次性切主题
+
+ValueAnimator.ofFloat(0f, maxR)         // 4. 下一帧起动画，maxR = 到最远角 + 8dp
+    .setInterpolator(new PathInterpolator(0.32f, 0.72f, 0f, 1f))
+    .setDuration(500);
 ```
 
-转场期间把毛玻璃临时拍平（`html.theme-switching .pill { backdrop-filter:none }`），避免新层采样到旧层快照。降级链完整：系统关动画、浏览器不支持 View Transitions、`prefers-reduced-motion`、原生截图失败、转场被中断，都回落到"直接切换、不播动画"。
+**揭开，而不是淡化**：绝大多数主题切换用"旧画面淡出 + 新画面淡入"，但在有磨砂玻璃（`backdrop-filter`）的界面上会糊成一片。快照遮罩的做法是把转场拆成两件事：一帧内换色（旧层定格成快照、新层已是最终画面），只让圆从按钮向外推开旧主题。圆内永远是已完成的最终画面，不会二次变色或闪半透明重影。
 
-上面这套 View Transitions 实现**只在桌面版（在线 / Windows / 本地文件）生效**。Android APK 走的是**另一套、且只有它才有的原生动画**：截当前窗口 → `RevealOverlayView` 快照遮罩反向挖洞 → 遮罩下一次切主题 → `ValueAnimator` 从按钮圆心扩张，缓动参数与 500ms 时长和桌面版一致，但机制完全不同（原生 View 动画，不依赖浏览器 API）。
+降级链完整：系统动画被关（`animator_duration_scale = 0`）、原生截图失败、转场被中断，都回落到"直接切换、不播动画"，幂等收尾不留残影。
+
+### 桌面版：只做颜色过渡，不播圆形动画
+
+桌面版走纯 CSS：`toggleTheme()` 只改 `data-theme`，由各元素自身的 `background` / `color` transition 平滑过渡，没有快照层、没有裁剪、没有 `startViewTransition`。首屏 `<head>` 的内联脚本在样式解析前就按 `prefers-color-scheme` / 本地偏好定好 `data-theme`，不会闪白。
 
 ---
 
@@ -293,7 +298,7 @@ Taskflow/
 - **为什么不把 exe 提交进仓库**：60MB+ 二进制会永久撑大 git 历史，所以构建产物全部忽略，发行物走 GitHub Releases。
 - **AI 需自带密钥**：浏览器直连你配置的模型接口，密钥只存本地；内置转发通道在公网参赛环境未启用。不配 AI 时全部本地能力照常可用。
 - **通知小图标复用彩色 launcher 图标**：Android 会渲染成单色剪影，状态栏只看得见形状；要修需单独做 `ic_stat_notify`。
-- **Web 端主题动画依赖 View Transitions API**：不支持的浏览器 / WebView 直接切换、不播动画，不会卡在半途。
+- **圆形揭示动画只有 APK 有**：走原生快照遮罩；桌面版（浏览器 / Windows）只有 CSS 颜色过渡，不播圆形动画。
 - **Windows 端**：导出走系统保存框、系统级通知在 WebView2 下未逐项实测；页面内提醒与计时链路已验证。
 
 ---
