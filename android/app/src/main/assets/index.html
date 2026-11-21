@@ -4164,7 +4164,8 @@ const PAUSE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><
    把用户选择的 hex 派生为一组强调色令牌，覆盖 :root 的后备值。
    Android 路径（存在 AndroidBridge）整体跳过，主题行为完全不变。 */
 const ACCENT_VARS = ['--primary','--on-primary','--primary-container','--on-primary-container',
-                     '--accent','--on-accent','--accent-strong','--accent-soft','--progress'];
+                     '--accent','--on-accent','--accent-strong','--accent-soft','--progress',
+                     '--chat-new-bg','--chat-new-bg-hover','--chat-new-fg','--chat-new-border'];
 let ACCENT_APPLIED = false;   /* 记录强调色覆盖是否由本函数写入，用于区分「清自己的」与「清原生的」 */
 function hexToRgb(hex){
   const m = /^#?([\da-f]{6})$/i.exec(String(hex || '').trim());
@@ -4200,6 +4201,11 @@ function applyAccent(dark){
   root.style.setProperty('--accent-soft', 'rgba(' + r + ',' + g + ',' + b + ',.14)');
   root.style.setProperty('--primary-container', dark ? mix(0,0,0,.62) : mix(255,255,255,.86));
   root.style.setProperty('--on-primary-container', dark ? mix(255,255,255,.30) : mix(0,0,0,.28));
+  // 侧栏「新会话」按钮跟随强调色：浅色用浅底深字（AA），深色用半透明底亮字
+  root.style.setProperty('--chat-new-bg', dark ? 'rgba(' + r + ',' + g + ',' + b + ',.14)' : mix(255,255,255,.88));
+  root.style.setProperty('--chat-new-bg-hover', dark ? 'rgba(' + r + ',' + g + ',' + b + ',.22)' : mix(255,255,255,.80));
+  root.style.setProperty('--chat-new-fg', dark ? mix(255,255,255,.30) : mix(0,0,0,.30));
+  root.style.setProperty('--chat-new-border', dark ? 'rgba(' + r + ',' + g + ',' + b + ',.24)' : 'transparent');
   ACCENT_APPLIED = true;
 }
 function setAccent(hex, silent){

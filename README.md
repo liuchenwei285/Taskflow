@@ -3,7 +3,7 @@
 # Taskflow · 把一份笔记，变成一套会计时的试卷和每日任务
 
 **一个"资料 → 试卷 → 计时任务"的学习工作台。**
-**同一份单文件应用，跑在浏览器、Windows 独立 exe 和 Android WebView 壳里，三份逐字节一致。**
+**桌面端（在线 / Windows exe）与 Android APK 是两种用法不同的应用：前者是带侧栏的宽屏学习工作台，后者是原生壳包裹的手机端 App。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
@@ -30,10 +30,25 @@
 
 | 形态 | 入口 | 说明 |
 |---|---|---|
-| 🌐 在线 | [Qoder Sites](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) | 免登录、免安装，手机电脑都能开 |
+| 🌐 在线 | [Qoder Sites](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) | 免登录、免安装，与 Windows 版同一套桌面用法 |
 | 🪟 Windows | [v2.6.1-windows Release](https://github.com/liuchenwei285/Taskflow/releases/tag/v2.6.1-windows) | 单文件 exe，双击即用，HTML 与图标内嵌，无附属文件夹 |
-| 🤖 Android | [Releases](https://github.com/liuchenwei285/Taskflow/releases) | WebView 壳 + 原生通知与主题动画，minSdk 24 |
+| 🤖 Android | [Releases](https://github.com/liuchenwei285/Taskflow/releases) | 原生壳包裹的手机端 App，minSdk 24，用法与桌面端不同 |
 | 📄 浏览器本地 | 双击 `task-timer-app.html` | 零依赖单文件，断网可用 |
+
+### 桌面版和 Android 版，用法不同
+
+两者共用同一份 Web 应用内核，但外面套的壳不同、布局不同、主题动画的实现也不同——**不是同一个界面换个窗口**，选的时候留意：
+
+| | 🖥️ 桌面版（在线 / Windows exe / 本地文件） | 📱 Android APK |
+|---|---|---|
+| 布局 | 宽屏（≥900px）有左侧栏：学习工作台 / 任务 / 统计 / 试卷库 / 我的，还有"新会话"与历史会话 | 窄屏移动布局，底部胶囊导航，没有桌面侧栏 |
+| 主题切换动画 | **浏览器 View Transitions**：`clip-path` 圆形从按钮中心揭开（`startViewTransition`） | **原生快照遮罩**：`RevealOverlayView` 截屏反向挖洞 + `ValueAnimator` 半径扩张，500ms 同一缓动——**这套原生动画只有 APK 有** |
+| 主题色 / 强调色 | 设置页有自定义强调色选择器，改一处全站跟随（含侧栏"新会话"按钮） | 控件隐藏，改走 Material You：原生从壁纸取色、经 `AndroidBridge.getThemeTokens()` 下发 |
+| 通知 | 标准 `Notification` API，权限被拒仍有页面内提醒 | 原生通知通道 `Notifications` + 震动，经 `AndroidBridge` |
+| 文件导出 | 浏览器 Blob 下载（PDF / PNG / MD / JSON / CSV） | SAF `AndroidBridge.saveFile()` |
+| 主要场景 | 坐在电脑前把笔记变成试卷、排进日程、导出 | 手机上随时开任务、看倒计时、收提醒 |
+
+一句话：**桌面版是"学习工作台"，Android 版是"口袋里的倒计时 App + 原生主题动画"**；业务数据（任务 / 会话 / 偏好）都用 `localStorage` 存在各自设备上，不互通。
 
 ---
 
@@ -120,7 +135,7 @@ vt.ready.then(function(){
 
 转场期间把毛玻璃临时拍平（`html.theme-switching .pill { backdrop-filter:none }`），避免新层采样到旧层快照。降级链完整：系统关动画、浏览器不支持 View Transitions、`prefers-reduced-motion`、原生截图失败、转场被中断，都回落到"直接切换、不播动画"。
 
-Android 壳里另有一套等价实现：截当前窗口 → 快照遮罩反向挖洞 → 遮罩下一次切主题 → `ValueAnimator` 从按钮圆心扩张，共用同一组缓动参数与 500ms 时长。
+上面这套 View Transitions 实现**只在桌面版（在线 / Windows / 本地文件）生效**。Android APK 走的是**另一套、且只有它才有的原生动画**：截当前窗口 → `RevealOverlayView` 快照遮罩反向挖洞 → 遮罩下一次切主题 → `ValueAnimator` 从按钮圆心扩张，缓动参数与 500ms 时长和桌面版一致，但机制完全不同（原生 View 动画，不依赖浏览器 API）。
 
 ---
 

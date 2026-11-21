@@ -3,7 +3,7 @@
 # Taskflow · Turn a set of notes into a timed exam and daily tasks
 
 **A study workbench built around one loop: notes → exam → timed tasks.**
-**The same single-file app runs in the browser, as a standalone Windows exe, and inside an Android WebView shell — all byte-identical.**
+**The desktop editions (online / Windows exe) and the Android APK are two different apps: the former is a wide-screen study workbench with a sidebar, the latter is a phone app wrapped in a native shell.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-FF3D8B.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.6.1-5558.svg)](https://github.com/liuchenwei285/Taskflow/releases)
@@ -30,10 +30,25 @@ The whole chain happens in one chat box — no page hops, no forms. An exam is n
 
 | Form | Entry | Notes |
 |---|---|---|
-| 🌐 Online | [Qoder Sites](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) | No login, no install, works on phone and desktop |
+| 🌐 Online | [Qoder Sites](https://taskflow-app-3qo4c3iuyvd.qoder.zone/) | No login, no install; same desktop usage as the Windows exe |
 | 🪟 Windows | [v2.6.1-windows release](https://github.com/liuchenwei285/Taskflow/releases/tag/v2.6.1-windows) | Single-file exe, HTML and icon embedded, no companion files |
-| 🤖 Android | [Releases](https://github.com/liuchenwei285/Taskflow/releases) | WebView shell with native notifications and theme animation, minSdk 24 |
+| 🤖 Android | [Releases](https://github.com/liuchenwei285/Taskflow/releases) | Phone app wrapped in a native shell, minSdk 24; usage differs from desktop |
 | 📄 Local file | Open `task-timer-app.html` | Zero-dependency single file, works offline |
+
+### The desktop edition and the Android edition are used differently
+
+Both share the same web app core, but the shell, layout and theme-animation implementation differ — **this is not one interface in a different window**:
+
+| | 🖥️ Desktop (online / Windows exe / local file) | 📱 Android APK |
+|---|---|---|
+| Layout | Wide-screen (≥900px) left sidebar: study studio / tasks / stats / exam library / me, plus "New conversation" and chat history | Narrow mobile layout with bottom pill nav, no desktop sidebar |
+| Theme animation | **Browser View Transitions**: `clip-path` circular reveal from the button (`startViewTransition`) | **Native snapshot mask**: `RevealOverlayView` screen capture with reverse hole-punch + `ValueAnimator` radius expansion, 500ms, same easing — **this native animation exists only in the APK** |
+| Theme / accent color | Settings has a custom accent picker; changing it recolors everything (including the sidebar "New conversation" button) | Picker hidden; uses Material You instead — native derives a wallpaper palette and pushes it via `AndroidBridge.getThemeTokens()` |
+| Notifications | Standard `Notification` API; in-page alert still fires if permission is denied | Native notification channel `Notifications` + vibration via `AndroidBridge` |
+| File export | Browser Blob download (PDF / PNG / MD / JSON / CSV) | SAF via `AndroidBridge.saveFile()` |
+| Main scenario | At a desk: turn notes into exams, schedule them, export | On a phone: open tasks, watch countdowns, receive reminders |
+
+In short: **the desktop edition is a "study workbench", the Android edition is a "pocket countdown app with native theme animation"**. Business data (tasks / sessions / prefs) lives in `localStorage` on each device and is not synced between them.
 
 ---
 
@@ -120,7 +135,7 @@ vt.ready.then(function(){
 
 During the transition frosted glass is flattened (`html.theme-switching .pill { backdrop-filter:none }`) so the new layer can't sample the old snapshot. The fallback chain is complete: system animations off, no View Transitions support, `prefers-reduced-motion`, failed native capture, or an interrupted transition all fall back to a plain instant switch.
 
-The Android shell has an equivalent native implementation: capture the window → snapshot mask with reverse hole-punch → swap theme under the mask → expand a `ValueAnimator` from the button center, sharing the same easing and 500ms duration.
+The View Transitions implementation above applies **only to the desktop edition (online / Windows / local file)**. The Android APK uses a **different animation that only it has**: capture the window → `RevealOverlayView` snapshot mask with reverse hole-punch → swap theme under the mask → expand a `ValueAnimator` from the button center. Same easing and 500ms duration as desktop, but a completely different mechanism (native View animation, not a browser API).
 
 ---
 
