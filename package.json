@@ -7,9 +7,6 @@
   "author": "Alfred Liu",
   "scripts": {
     "serve": "node tools/serve.js",
-    "test": "node tools/run-tests.js",
-    "docs": "node tools/capture-docs.js && node tools/build-sequence-figure.js && node tools/make-gif.js",
-    "gif": "node tools/make-gif.js",
     "icons": "node android/icon-source/generate-icons.js"
   },
   "devDependencies": {
